@@ -1,0 +1,178 @@
+---
+title: "Module 4 - Lesson 2"
+author: "Ali Banijamali"
+---
+
+#Questions:
+
+This homework assignment focuses on Clustering. You will provide a written analysis based on the following information:
+
+**First**, go to the UC Irvine Machine Learning Repository at https://archive.ics.uci.edu/ml/ and find a dataset for clustering. Note that every student MUST use a different dataset so you MUST get approved for which data you are going to use. You will use this dataset for this module on unsupervised learning and the next on supervised learning.
+
+**Next**, cluster some of your data using k-means, PAM and hierarchical clustering.
+
+**Finally**, answer the following questions:
+
+How did you choose a k for k-means? 
+
+Evaluate the model performance. How do the clustering approaches compare on the same data? 
+
+Generate and plot confusion matrices for the k-means and PAM. What do they tell you?
+
+Generate centroid plots against the 1st two discriminant functions for k-means and PAM. What do they tell you? 
+
+Generate silhouette plots for PAM. What do they tell you?
+
+For the hierarchical clustering use all linkage methods (Single Link, Complete Link, Average Link, Centroid and Minimum energy clustering) and generate dendograms. How do they compare on the same data? 
+
+For the hierarchical clustering use both agglomerative and divisive clustering with a linkage method of your choice and generate dendograms. How do they compare on the same data? 
+
+For the hierarchical clustering use centroid clustering and squared Euclidean distance and generate dendograms. How do they compare on the same data?
+
+
+#Answers:
+
+##First:
+I have chosen the *Student Performance - Math Course* data set to work with. I am removing the non-numeric and redundant columns of the data set.
+
+```{r}
+SP <- read.csv(file = "C:/Users/Ali/Desktop/DSCS 6030 - Intro to data Mining and Machine Learning/Module 4 - Unsupervised Learning/Assignments/L2/Student Performance Data/student-mat.csv",
+         header=TRUE, sep=";")
+I <- c("sex", "age", "health", "absences", "G3")
+SP <- SP[I]
+str(SP)
+```
+
+##Next:
+Clustering the data; We are clustering our data using different methods:
+
+```{r, echo=FALSE}
+
+require(ggplot2)
+require(cluster)
+require(amap)
+require(useful)
+
+```
+
+1. **K-MEANS:**
+
+First we will use the k-mean for the grades. Note that here we know the number of clusters which are different genders. We are first plotting the distribution for the final grades of female and mal students:
+
+```{r}
+qplot(x=G3, data=SP, geom="density", group=sex, color=sex)
+```
+
+From the above plot we can understand that generally the two plots overlap and have almost the same distribution, however, the pick for female student grades is higher. Now we are going to use the k-means to see how it clusters teh data:
+
+```{r}
+k1 <- 2
+Stu <- kmeans(SP[c("G3")],k1)
+Stu
+```
+
+The confusion matrix will be:
+
+```{r}
+CnfM <- table(SP$sex, Stu$cluster)
+CnfM
+plot(CnfM)
+```
+
+As we can see the data is very poorly clustered and the reason might be because there is a huge overlap on the range of the two set of data according to the density plot (before the confusion plot).
+
+Now lets determine the number of clusters assuming that we don't know the number of clusters for all of the data set:
+
+```{r}
+KD <- (nrow(SP[c("age", "health", "absences", "G3")])-1)*sum(apply(SP[c("age", "health", "absences", "G3")],2,var)) 
+for (i in 2:10) KD[i] <- sum(kmeans(SP[c("age", "health", "absences", "G3")], centers=i)$withinss) 
+plot(1:10, KD, type="b", xlab="Number of Clusters", ylab="sum of squares")
+```
+
+We can see that 6 clusters might be good and even 4 clusters better makes sense because we can devide the students in four group of A, B, C and D as academic standing. Now we also try hartigan's rule:
+
+```{r}
+Hartk <- FitKMeans(SP[c("age", "health", "absences", "G3")],max.clusters=10, seed=111) 
+PlotHartigan(Hartk)
+```
+
+hartigan's rule also recommends 3 or 4 clusters. We are considering 4 clusters for this data set.
+
+Next, we are going to evaluate our model with four clusters:
+
+```{r}
+k2 <- 4
+StuO <- kmeans(SP[c("age", "health", "absences", "G3")],k2)
+StuO
+```
+
+Size of the clusters, cluster centers and cluster means:
+
+```{r}
+StuO$size
+StuO$centers
+
+Age <- aggregate(data = SP[c("age", "health", "absences", "G3")], age ~ StuO$cluster, mean)
+Age
+
+Health <- aggregate(data = SP[c("age", "health", "absences", "G3")], health ~ StuO$cluster, mean)
+Health
+
+Absences <- aggregate(data = SP[c("age", "health", "absences", "G3")], absences ~ StuO$cluster, mean)
+Absences
+
+FinalGrade <- aggregate(data = SP[c("age", "health", "absences", "G3")], G3 ~ StuO$cluster, mean)
+FinalGrade
+
+```
+
+2. **PAM:**
+
+Now we will use PAM method for clustering:
+
+```{r}
+k3 <- 4
+StuOP <- pam(SP[c("age", "health", "absences", "G3")], k3, keep.diss = TRUE, keep.data = TRUE)
+StuOP
+
+plot(StuOP, which.plots = 2)
+```
+
+As we can see the result of clustering is very bad and the Silhouette plot shows a poorly clustered data. The reason might be because the data is not very much clustered at all.
+
+And the confusion matrix will be:
+
+```{r}
+#CnfMP<-table(1:395, wb.6.clust.33$cluster)
+#CnfMP
+
+```
+
+3. **HIERARCHICAL CLUSTERING:**
+
+Finally, we are going to try different methods of hierarchical clustering method:
+
+```{r}
+StuOH <- hclust(d=dist(SP[c("age", "health", "absences", "G3")]))
+plot(StuOH)
+```
+
+and with different methods of clustering we will have:
+
+```{r}
+StuOH.s<- hclust(d=dist(SP[c("age", "health", "absences", "G3")]), method = "single")
+plot(StuOH.s)
+
+StuOH.co<- hclust(d=dist(SP[c("age", "health", "absences", "G3")]), method = "complete")
+plot(StuOH.co)
+
+StuOH.a<- hclust(d=dist(SP[c("age", "health", "absences", "G3")]), method = "average")
+plot(StuOH.a)
+
+StuOH.ce<- hclust(d=dist(SP[c("age", "health", "absences", "G3")]), method = "centroid")
+plot(StuOH.ce)
+
+```
+
+To me none of these dendograms seem reasonable and again this method says the same thing that other methods proved. One portion of data in all of the dendograms is on one side of the diagram and the whole other values are on the other side of the diagram. This trend, as also discussed in the course videos, does not seem quit reasonable. Overally all of the diagrams are not that different from each other and none of the different methods of hierarchical clustering is not significantly better than the other ones.
+
