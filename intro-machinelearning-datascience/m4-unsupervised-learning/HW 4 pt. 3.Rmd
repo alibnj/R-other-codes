@@ -1,0 +1,111 @@
+---
+title: "Module 4 - Lesson 4"
+author: "Ali Banijamali"
+---
+
+#Questions:
+
+This homework assignment focuses on Association Rules. You will provide a written analysis based on the following information:
+
+**First**, select a transaction dataset from the Frequent Itemset Mining Dataset Repository at http://fimi.ua.ac.be/data/ or another transaction dataset of your choice from the Web. 
+
+**Next**, generate a set of 50 or so (non-redundant) rules.
+
+**Finally**, answer the following questions: 
+
+1. Which rules make sense to you? Highlight the five best and five worst of your rule set. 
+
+2. How did you choose the level of support and confidence? 
+
+3. What is the lift and conviction of your best and worst rules? 
+
+4. Visualize your 50 association rules. Where do the best and worst end up in your plot? 
+
+5. Does the model make sense?
+
+
+#Answers:
+
+##First:
+
+Requiring the packages:
+```{r, echo=FALSE}
+require(arules)
+require(arulesViz)
+require(Matrix)
+```
+
+I am using the data of a grocery store shopping transactions. I have downloaded the file from the internet and I uploaded the file on dropbox so that you can download it to knit my .rmd file here: (https://www.dropbox.com/s/aq8ajjk0ydbu709/groceries.csv?dl=0). Each line contains the list of the items:
+```{r}
+MB = read.transactions("C:/Users/Ali/Desktop/DSCS 6030 - Intro to data Mining and Machine Learning/Module 4 - Unsupervised Learning/Assignments/L2/groceries.csv", format = "basket", sep = ",", rm.duplicates = TRUE)
+```
+
+##Next:
+* Generating rules:
+
+Let's first take a look at the first 10 lines of the transactions and plot the frequency of the items:
+```{r}
+inspect(MB[1:10])
+itemFrequencyPlot(MB, support = 0.1, topN = 10)
+```
+
+Now let's use apriori to generate rules:
+```{r}
+APMB <- apriori(MB)
+APMB
+```
+
+As expected, the default setting returns 0 rules. Now lets change the settings:
+```{r}
+#APMB <- apriori(MB, parameter = list(support = 0.01, confidence = 0.9, minlen = 5))
+#APMB
+
+APMB <- apriori(MB, parameter = list(support = 0.001, confidence = 0.9, minlen = 5))
+APMB
+```
+Now we have 62 rules. Let's take a look at the first five rules:
+
+```{r}
+inspect(APMB[1:5])
+```
+
+There are a lot of rules, so let's sort them based on the confidence:
+
+**5 Best:**
+```{r}
+APMBS <- sort(APMB, by="confidence", decreasing=TRUE)
+#inspect(APMBS[1:20])
+inspect(APMBS[1:5])
+```
+
+and **5 Worst** (Based on conficence): (Note that the minimum confidence will be 0.9 any way and it is still a good value. Therefore, it is relatively worse)
+
+```{r}
+APMBS <- sort(APMB, by="confidence", decreasing=FALSE)
+inspect(APMBS[1:5])
+```
+
+As we can see from above, the level of the lift for our best rule is 5.16 and for the worst rule it is 3.55.
+
+We can also prune the data:
+
+```{r}
+#subset.matrix <- is.subset(ABMB, APMB)
+#subset.matrix[lower.tri(subset.matrix, diag=T)] <- NA
+#redundant <- colSums(subset.matrix, na.rm=T) >= 1
+#APMBPR <- APMB[!redundant]
+```
+
+* Now let's vizualise our data:
+
+```{r}
+plot(APMB)
+
+plot(APMB, method="graph", control=list(type="items"))
+
+plot(APMB, method="paracoord", control=list(reorder=TRUE))
+```
+
+From the parallel plot we can see the most frequent rhs and the path of different rules.
+
+Yes, the model makes sense. If we look at the first three most confident models we can see people usually buy different fruits and vegetables together.

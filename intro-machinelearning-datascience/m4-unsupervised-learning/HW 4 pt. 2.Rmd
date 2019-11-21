@@ -1,0 +1,59 @@
+---
+title: "Module 4 - Lesson 3"
+author: "Ali Banijamali"
+---
+
+#Questions:
+
+This homework assignment focuses on Expectation-maximization (EM). Provide a written analysis based on the following information:
+
+**First**, you will use the same dataset you chose for previous assignment (M04 Lesson 02 for the partition (k-means, PAM) and hierarchical clustering) from the he the UC Irvine Machine Learning Repository at https://archive.ics.uci.edu/ml/
+
+**Next**, cluster some of your data using EM based clustering and answer the following questions:
+
+1. How did you choose a model for EM? Evaluate the model performance.
+
+2. Cluster some of your data using EM based clustering that you also used for k-means, PAM, and hierarchical clustering. How do the clustering approaches compare on the same data?
+
+
+#Answers:
+
+##First:
+I have chosen the *Student Performance - Math Course* data set to work with. I am removing the non-numeric and redundant columns of the data set.
+
+```{r}
+SP <- read.csv(file = "C:/Users/Ali/Desktop/DSCS 6030 - Intro to data Mining and Machine Learning/Module 4 - Unsupervised Learning/Assignments/L2/Student Performance Data/student-mat.csv",
+         header=TRUE, sep=";")
+I <- c("sex", "age", "health", "absences", "G3")
+SP <- SP[I]
+str(SP)
+```
+
+##Next:
+Clustering the data:
+
+```{r, echo=FALSE}
+require(mclust)
+```
+
+```{r}
+fit <- Mclust(SP[c("age", "health", "absences", "G3")])
+fit
+summary(fit)
+plot(fit, what = "BIC")
+```
+
+The recommended model for us is Mclust E (univariate, equal variance) model with 7 components. As we can see 7 components are recommended by the mclust function.
+
+The BIS is -7013.16 and we know that lower BIC is better.
+
+I am running clPairs function based on male and female for the whole data:
+
+```{r}
+clPairs(SP[c("age", "health", "absences", "G3")], SP$sex)
+```
+
+As we can see, the data is not clustered at all and from this plot we can very well understand that why we get strange number of clusters. firs of all, the data of the male and female students have a huge overlap and are almost identical, this similarity can be best shown by the above plot. Other than that, we can see that only in the case of Final grades (G3) and the number of absences we can see some clusters (maximum 2 clusters.).
+I think this data set is not quite good for a clustering analysis. This was also shown in the previous models.
+
+
