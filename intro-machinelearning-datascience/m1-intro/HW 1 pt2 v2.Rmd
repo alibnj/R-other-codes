@@ -1,0 +1,123 @@
+---
+title: "HW 1 Pt. 2"
+author: "Ali Banijamali"
+---
+
+* **First**, load the file *M01_quasi_twitter.csv*
+
+
+```{r}
+twitter <- read.csv(file = "C:/Users/Ali/Desktop/DSCS 6030 - Intro to data Mining and Machine Learning/Module 1/Assignment/M01_quasi_twitter.csv",
+         header=TRUE, sep=",")
+```
+
+* **Next**, answer the following questions for the data in each column:
+
+    * How is the data distributed?
+    
+    * What happens when you test distribution assumptions (e.g. normal distributions or skewed, etc)?
+    
+    * What are the summary statistics?
+    
+    * Are there anomalies/outliers?
+    
+    * Can you identify the following:
+    
+        * useful raw data and transforms (e.g. log(x))
+        
+        * data quality problems
+        
+        * outliers
+        
+        * subsets of interest
+        
+    * Finally, suggest any functional relationships.
+
+> Here is the summary of all the data:
+
+```{r, echo=FALSE}
+
+lapply(twitter, summary) 
+
+```
+
+> Here are the histograms of the numerical data:
+
+```{r, echo=FALSE}
+
+hist(twitter$created_at_month, breaks=10, col="1")
+
+hist(twitter$created_at_day, breaks=10, col="2")
+
+hist(twitter$created_at_year, breaks=10, col="3")
+
+hist(twitter$friends_count, breaks=10, col="4")
+
+hist(twitter$followers_count, breaks=10, col="5")
+
+hist(twitter$statuses_count, breaks=10, col="6")
+
+hist(twitter$favourites_count, breaks=10, col="7")
+
+hist(twitter$favourited_count, breaks=10, col="8")
+
+hist(twitter$dob_day, breaks=10, col="9")
+
+hist(twitter$dob_year, breaks=10, col="10")
+
+hist(twitter$dob_month, breaks=10, col="11")
+
+hist(twitter$mobile_favourites_count, breaks=10, col="12")
+
+hist(twitter$mobile_favourited_count, breaks=10, col="13")
+
+hist(twitter$education, breaks=10, col="14")
+
+hist(twitter$experience, breaks=10, col="15")
+
+hist(twitter$age, breaks=10, col="16")
+
+hist(twitter$wage, breaks=10, col="17")
+
+hist(twitter$retweeted_count, breaks=10, col="18")
+
+hist(twitter$retweet_count, breaks=10, col="19")
+
+hist(twitter$height, breaks=10, col="20")
+
+```
+
+
+
+* created at month/day/year are almost uniform.
+
+* education, experience, age, wage and height are almost normal.
+
+* For distinction between skewed and normal we have to look at the median and mean in the data summaries:
+
+* retweet count, mobile favourited count, mobile favourites count, favourited count, favourites count, statuses count, followers count, friends count are all skewed distributions.
+
+* By looking at the countries: Kuwait and Portugal have the least number of twits (49) and USA has the most number of twits (14905).
+
+* By looking at the locations: SoCal has the least frequency (37) and Mexico has the most frequency (122)
+
+* By looking at the gender: distribution we can see that there are more men (14569) on twitter compared to women (7319).
+
+* By looking at the races: Most of the users are white (18032) and the fewest number of users are indian (162).
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
