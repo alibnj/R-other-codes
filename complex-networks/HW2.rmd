@@ -1,0 +1,136 @@
+---
+title: "PHYS 5116 - Complex Networks - Assignment 2 (Q1)"
+author: "Ali Banijamali"
+---
+
+##1. Our Class Network:
+
+```{r, echo=FALSE, include=FALSE}
+#include=FALSE removes everything from showing up in the markdown, including the reports of loading packages
+
+CNET.E <- read.csv('C:/Users/Ali/Desktop/PHYS 5116 - Complex Networks - Fall 2015/Assignments/2/class_network/class_network_files/class_network [Edges].csv', header=TRUE, sep="\t")
+
+CNET.N <- read.csv('C:/Users/Ali/Desktop/PHYS 5116 - Complex Networks - Fall 2015/Assignments/2/class_network/class_network_files/class_network [Nodes].csv', header=TRUE, sep="\t")
+
+#install.packages("igraph")
+#install.packages("network") 
+#install.packages("sna")
+#install.packages("ndtv")
+#install.packages("RColorBrewer")
+#install.packages("plotrix")
+
+require(igraph)
+#require(network)
+#require(sna)
+#require(ndtv)
+require(RColorBrewer)
+require(plotrix)
+
+```
+
+
+#### Visualizing the network: 
+<center>
+```{r, echo=FALSE}
+CNET <- graph.data.frame(CNET.E, CNET.N, directed = TRUE)
+
+#Based on Grad/Undergrad
+col1 <- c("tomato1", "khaki2")
+V(CNET)$color <- col1[V(CNET)$Under.grad]
+V(CNET)$frame.color <- "gray80"
+V(CNET)$size <- 15
+
+E(CNET)$arrow.size <- .2
+E(CNET)$color <- "gray50"
+E(CNET)$curved <- .2
+E(CNET)$width <- 1
+
+l1 <- layout.fruchterman.reingold(CNET)
+l1 <- layout.norm(l1, ymin=-1, ymax=1, xmin=-1, xmax=1)
+par(mar=c(0,0,0,0)) #To set the margins (empty space) around the plot (top, bottom, left and right) to zero.
+plot(CNET, rescale=F, layout=l1)
+```
+</center>
+<center>**Color: Grad/Undergrad**</center>
+
+
+<center>
+```{r, echo=FALSE}
+col2 <- brewer.pal(9, "Spectral")
+col3 <- c("deeppink", "khaki2", "purple3", "tomato1", "chartreuse", "turquoise1", "darkgreen", "orange", "gold")
+V(CNET)$color <- col2[V(CNET)$Department]
+V(CNET)$frame.color <- "gray80"
+V(CNET)$size <- 15
+
+E(CNET)$arrow.size <- .2
+E(CNET)$color <- "gray50"
+E(CNET)$curved <- .2
+E(CNET)$width <- 1
+
+l2 <- layout.fruchterman.reingold(CNET)
+l2 <- layout.norm(l2, ymin=-1, ymax=1, xmin=-1, xmax=1)
+par(mar=c(0,0,0,0))
+plot(CNET, rescale=F, layout=l2)
+```
+</center>
+<center>**Color: Programs**</center>
+
+
+<center>
+```{r, echo=FALSE}
+V(CNET)$color <- col2[V(CNET)$Department]
+V(CNET)$frame.color <- "gray80"
+a <- (V(CNET)$Under.grad)*2
+V(CNET)$size <- (V(CNET)$Under.grad)*8
+
+E(CNET)$arrow.size <- .2
+E(CNET)$color <- "gray50"
+E(CNET)$curved <- .2
+E(CNET)$width <- 1
+
+l3 <- layout.fruchterman.reingold(CNET)
+l3 <- layout.norm(l3, ymin=-1, ymax=1, xmin=-1, xmax=1)
+par(mar=c(0,0,0,0))
+plot(CNET, rescale=F, layout=l3)
+```
+</center>
+<center>**Size: Grad/Undergrad | Color: Program**</center>
+> (a) There are a couple of things which can be understood from this plot. Most of the class are graduate students / There is no link between grad and undergrad students / Grad and undergrad students are only connected together (if there is a link) / Mostly the same programs are connected together. All of these points make sense.
+
+<center>![Size Based on Degree and Color Based on Betweenness Centrality](C:\Users\Ali\Desktop\PHYS 5116 - Complex Networks - Fall 2015\Assignments\2\My R Code\Bet-Deg1.png)</center>
+<center>**Size: Degree | Color: Betweenness Centrality**</center>
+> (b) The highest degree nodes are in the largest components / Nodes 14, 16 and 18 have the highest betweenness and they act as links between different programs.
+
+> (c) $$\frac{8}{26}\sim0.3$$
+
+> (d) Closeness centrality cannot be applied to networks with disconnected components like what we have here. There is no attribute left that has not been used in the figures (Department, Programs, Degree, Betweenness). I am visualizing the graph using in-degrees as the size of nodes and grad/undergrad as the color which shows the popularity of nodes in the graph. We can see 3 equally popular nodes (16, 18 and 21) and almost %30 of the nodes have zero in-dgrees.
+
+<center>
+```{r, echo=FALSE}
+#dd.in <- degree.distribution(CNET, cumulative=T, mode="in")
+#plot(dd.in, pch=19, cex=1, col="orange", xlab="k.in", ylab="P(k)")
+deg.in <- degree(CNET, mode="in")
+
+V(CNET)$color <- col1[V(CNET)$Under.grad]
+V(CNET)$frame.color <- "gray80"
+V(CNET)$size <- deg.in*3+1
+
+E(CNET)$arrow.size <- .2
+E(CNET)$color <- "gray50"
+E(CNET)$curved <- .2
+E(CNET)$width <- 1
+
+l4 <- layout.fruchterman.reingold(CNET)
+l4 <- layout.norm(l4, ymin=-1, ymax=1, xmin=-1, xmax=1)
+par(mar=c(0,0,0,0))
+plot(CNET, rescale=F, layout=l4)
+```
+</center>
+<center>**Size: In.Degree | Color: Grad/Undergrad**</center>
+
+
+
+
+
+
+
