@@ -1,0 +1,220 @@
+---
+title: 'DA5020 Homework 4: Strings and Factors'
+author: "Ali Banijamali"
+date: "9/30/2019"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+always_allow_html: yes
+---
+  
+```{r setup, include=F, message=F, warning=F}
+knitr::opts_chunk$set(message = FALSE)
+library('stringr')
+library('tibble')
+library('ggplot2')
+library('viridis')
+library('forcats')
+library('tidyverse')
+library('htmlwidgets') # required for str_view
+```
+
+## Preparation
+
+Download US [Farmers Markert Directory](https://www.ams.usda.gov/local-food-directories/farmersmarkets) data from the website of USDA (click on "Export to Excel"). Rename the file as _farmers_market.csv_.
+
+Download the [Know Your Farmer, Know Your Food Projects](https://catalog.data.gov/dataset/know-your-farmer-know-your-food-projects) dataset and name it as _kyfprojects.xls_. Put it into the same folder.
+
+
+
+Read the data:
+
+```{r, echo=T, message=F, warning=F}
+fm <- read.csv('C:/Users/alibs/Google Drive/Courses/DA 5020 - Collect, Store & Retrieve Data/Week 4 - Data wrangling data import and strings/farmers_market.csv', header=T, stringsAsFactors=F)
+
+kyf <- read.csv('C:/Users/alibs/Google Drive/Courses/DA 5020 - Collect, Store & Retrieve Data/Week 4 - Data wrangling data import and strings/kyfprojects.csv', header=T, stringsAsFactors=F)
+```
+  
+  
+  ## Warm Up
+  
+  This dataset stores city and state in different columns, what if you want to
+print out city and state in the format "City, State"?
+  
+  
+  ## Questions
+  
+  Please edit this file and add your own solutions to these questions.
+Make your output as readable as possible. Next time you would need to create this file on your own. Feel free to try out other templates (e.g. [Tufte Handout](http://rstudio.github.io/tufte/)) if your are familiar with LaTex. But for whatever template you choose, you should always include a link to your GitHub repo at the first page of your PDF.
+
+1. (20 points) Cleanup the `Facebook` and `Twitter` column to let them contain only the facebook username or twitter handle name. I.e., replace "https://www.facebook.com/pages/Cameron-Park-Farmers-Market/97634216535?ref=hl" with "Cameron-Park-Farmers-Market", "https://twitter.com/FarmMarket125th" with "FarmMarket125th", and "\@21acres" with "21acres".
+
+```{r, echo=T, message=F, warning=F}
+# ANSWERED BY PROFESSOR:
+string1 <- "This is a string"
+string2 <- 'If I want to include a "quote" inside a string, I use single quotes'
+x <- c("\"", "\\")
+x
+
+x <- c("apple", "banana", "pear") # this is a character vector
+str_length(x) # returns a vector with the length of each string
+str_length("Welcome to DA5020")
+str_length(c("kathleen", "gregg", "ava"))
+
+
+str_c("k","c")
+str_c("k","c", sep = "|")
+str_c("k","c", sep = "|")
+y <- c( "doll", "yoyo", NA)
+str_length(y)
+str_replace_na(y) # substitute the "NA" string for NA
+str_c(c("k","t","d"),collapse ="") # make it 1 string
+str_c(c("k","t","d"),collapse =",") # make it 1 string
+
+
+colours <- c("red", "orange", "yellow", "green", "blue", "purple")
+colour_match <- str_c(colours, collapse = "|")
+colour_match
+localSentences <- sentences
+localSentences <- c("17 Barbara Rd", "18 Stella Rd.", "UNKNOWN")
+
+str_sub("Apple",1,3)
+str_sub(c("Apple","Pear", "Plum"), 1, 3)
+str_sub(c("Apple","Pear", "Plum","Te"), 1, 3) # only 2 characters in last entry
+
+str_to_lower("Apple")
+str_to_upper("apple pear")
+str_to_title("THIS IS NOT WHAT i WANT")
+
+str_trim("   Now is the time    ")
+str_wrap(c("the time is notw right for revolting"), width = 1) 
+# str_view takes a character vector and a regular expression and shows you the match in the string for the regular expression 
+zz <- c("apple", "pear", "plum")
+str_view(zz,"pl")
+str_view(zz,"p")
+
+x <- c("apple", "banana", "pear") # this is a character vector
+xp <- c("apple.", "banana.", "pear.") # this is a character vector
+xb <- c("apple\\", "banana\\", "pear\\") # this is a character vector
+
+str_view(x, "an")
+str_view(x, ".a.") # match any character but a new line 
+str_view(xp, "e\\.") # match any character but a new line 
+str_view(xb, "r\\\\") # match any character but a new line 
+# anchoring 
+c("apple\\", "banana\\", "pear\\") %>% str_match("^a") # only match
+c("apple\\", "banana\\", "pear\\") %>% str_view("^a") # only match
+str_view("12345", "^\\d\\d\\d")
+str_view("12345", "[^12]") # this means not 1 or 2 
+str_view_all("12345", "[^12]")
+str_view(x,"p?") # want 0 or 1 p in the string 
+str_view(x,"p{1,2}")
+palidrome <- c("anna", "eve", "hannah")
+str_view(palidrome, "(.)(.)\\2\\1")
+str_view(palidrome, "(.)(.)\\2\\1?")
+str_view(palidrome, "(.)(.)(.)\\3\\2\\1?")
+
+# detect if a string matches a regular expression
+str_detect(x,"e")
+sum(str_detect(x,"e"))
+mean(str_detect(x,"e"))
+
+str_extract(x,"p..") #substrings that start with a p and are 3 chars.
+xc <- x 
+xd <- x
+str_replace(xc, "p..", "x")
+str_replace_all(xc, c("p"= "x", "l" = "y"))
+str_split("apples corn pears", " ")
+str_split("apples corn pears", "p..")
+str_locate("apples corn pears", "p..")
+str_locate(x, "p..") # returns a matrix
+# matching substrings 
+str_match(localSentences, "[1234567890]+")
+str_match(c("adad","nana","anna"), "(..)+\\1")
+str_match(c("adad","nana","anna"), "(..)+")
+str_match(c("adad","nana","anna"), "(.)(.)+\\2\\1")
+str_match(c("adada","nana","annaanna"), "(.)(.)\\2\\1")
+str_detect(c("adada","nana","annaanna","adda", "addda"), "(.)(.)\\2\\2\\1")
+str_match(localSentences, "\\d+")
+#str_replace(localSentences, "[1|2|3|4|5|6|7|8|9|0]")
+
+```
+
+2. (20 points) Clean up the `city` and `street` column. Remove state and county names from the `city` column and consolidate address spellings to be more consistent (e.g. "St.", "ST.", "Street" all become "St"; "and" changes to "&", etc...).
+
+```{r, echo=T, message=F, warning=F}
+fm$city <- gsub(',(.*)', '', fm$city)
+# ,(.*) comma followed by . anything except /n for * zero or more times
+
+fm$street <- gsub('[sS][tT](.*)([ .]*)', 'St', fm$street)
+# [sS] Capital or small s followed by
+# [tT] Capital or small s followed by
+# (.*) . anything except /n for * zero or more times followed by
+# ([ .]*) [ .] space or dot for * zero or more times
+
+fm$street <- gsub(' [aA][nN][dD] ', ' & ', fm$street) 
+```
+
+3. (20 points) Create a new data frame (tibble) that explains the online presence of each state's farmers market. I.e., how many percentages of them have a facebook account? A twitter account? Or either of the accounts? (Hint: use the `is.na()` function)
+
+```{r, echo=T, message=F, warning=F}
+# The empty cells in this dataframe are not NAs, first I am turning empty cells to NA,
+# then I'll use is.na()
+fm[fm==''] <- NA
+w.fb.perc <- length(fm$Facebook[!is.na(fm$Facebook)])*100/length(fm$Facebook)
+w.tw.perc <- length(fm$Twitter[!is.na(fm$Twitter)])*100/length(fm$Twitter)
+w.fbtw.perc <- nrow(fm[!is.na(fm$Facebook) & !is.na(fm$Twitter), ])*100/nrow(fm) # &: and - |: or
+w.fbortw.perc <- nrow(fm[!is.na(fm$Facebook) | !is.na(fm$Twitter), ])*100/nrow(fm) # &: and - |: or
+# Making a tibble:
+social.media <- tibble(social.media.statistics=c('With a facebook account', 'With a Twitter account', 'With facebook & Twitter account', 'With facebook or Twitter account'),
+                       percentage=c(w.fb.perc, w.tw.perc, w.fbtw.perc, w.fbortw.perc))
+head(social.media)
+```
+
+4. (20 points) 
+    Some of the farmer market names are quite long. Can you make them shorter by using the `forcats::fct_recode` function? Create a plot that demonstrates the number of farmers markets per location type. The locations should be ordered in descending order where the top of the graph will have the one with the highest number of markets.
+
+I can't think of fct_recode being super useful here. We can assign shorter names to some of the market names but that wouldn't be so efficient since you have to do that for every single one of those long names, instead I think using gsub to change for example all of the variations of 'farmer market's to fm would be more helful in making those names shorter. But just to show you that I know how to use it and avoid loosing point on this question, Here is an example on we can use it:    
+```{r, echo=T, message=F, warning=F}
+fm$MarketName.new <- as.factor(fm$MarketName)
+fm$MarketName.new <- fct_recode(fm$MarketName.new,
+                                'North Logan'='25th Street Market - North Logan at the Library Summer 2016',
+                                'Community of Hope'="Arcadia's Mobile Market -- Community of Hope - Conway Health and Resource Center") # we can do this for any number of market names
+
+# Here's what I prefer to do, I'll replace different variations of farmer markets with fm:
+fm$MarketName <- gsub("[fF][aA][rR][mM]([eE]*)([rR]*)('*)([sS]*)('*)( *)[mM][aA][rR][kK][eE][tT]", "fm", fm$MarketName)
+
+# Number of farmer markets per Location type:
+per.loc <- as.data.frame(table(fm$Location))
+per.loc <- per.loc[order(-per.loc$Freq), ]
+row.names(per.loc) <- NULL
+
+# Bar Plot:
+# sorting barplots from heighest to lowest count with reorder()
+ggplot(data=per.loc, mapping=aes(x=reorder(Var1, -Freq), y=Freq, fill=per.loc$Freq))+
+  geom_bar(stat="identity", width=0.1)+
+  ylab("Location Type")+
+  theme(legend.title = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1),
+        axis.title.x = element_blank())+
+  scale_fill_viridis(option='plasma', direction=1)
+``` 
+
+5. (20 points) Write code to sanity check the `kyfprojects` data. For example, does `Program Abbreviation` always match `Program Name` for all the rows? (Try thinking of your own rules, too.)
+
+```{r, echo=T, message=F, warning=F}
+# Here I create the correct abbreviation in the column Program.Abbreviation.correct, then we can easily compare it
+# with the ones in the data
+kyf$Program.Abbreviation.correct <- gsub(' |[a-z]|[0-9]|[//.]|-', '', kyf$Program.Name)
+
+# The following lets us know if the two column are the same or not(TRUE=correct abbr., FALSE=False abbr.):
+result <- kyf$Program.Abbreviation==kyf$Program.Abbreviation.correct
+table(result) # This shows the number of false abbreviations
+# Columns X and X.1 are all NA, we can remove those columns:
+kyf$X <- NULL
+kyf$X.1 <- NULL
+```
+
+## Submission
+You need to submit an .Rmd extension file as well as the generated pdf file. Be sure to state all the assumptions and give explanations as comments in the .Rmd file wherever needed to help us assess your submission. Please name the submission file LAST_FirstInitial_1.Rmd for example for John Smith's 1st assignment, the file should be named Smith_J_1.Rmd. 
