@@ -1,0 +1,134 @@
+---
+title: "DA5020 - Week 7 Data Collection through Web Scraping and APIs"
+author: "Ali Banijamali"
+date: "17/04/2019"
+output: pdf_document
+---
+
+# 1. Scraping Yelp's website using "rvest" package:
+
+1.1. Loading the necessary libraries:
+```{r, echo=T, message=F, warning=F}
+# Required Packages:
+library('stringr')
+library('ggplot2')
+library('rvest')
+library('png') # For reading png image files
+```
+
+
+1.2. The program to extract the first 3 pages of results:
+```{r, echo=T, message=F, warning=F}
+links <- c("https://www.yelp.com/search?find_desc=burgers&find_loc=Boston%2C%20MA&l=p%3AMA%3ABoston%3A%3A%5BAllston%2FBrighton%2CBack_Bay%2CBeacon_Hill%2CDowntown%2CFenway%2CSouth_End%2CWest_End%5D",
+           "https://www.yelp.com/search?find_desc=burgers&find_loc=Boston%2C%20MA&l=p%3AMA%3ABoston%3A%3A%5BAllston%2FBrighton%2CBack_Bay%2CBeacon_Hill%2CDowntown%2CFenway%2CSouth_End%2CWest_End%5D&start=30",
+           "https://www.yelp.com/search?find_desc=burgers&find_loc=Boston%2C%20MA&l=p%3AMA%3ABoston%3A%3A%5BAllston%2FBrighton%2CBack_Bay%2CBeacon_Hill%2CDowntown%2CFenway%2CSouth_End%2CWest_End%5D&start=60")
+
+rest.info <- data.frame(restaurant.name=character(),
+                        phone.number=character(),
+                        address=character(),
+                        price=character(),
+                        categories=character(),
+                        review.count=character(), stringsAsFactors=F)
+link <- read_html("https://www.yelp.com/search?find_desc=burgers&find_loc=Boston%2C%20MA&l=p%3AMA%3ABoston%3A%3A%5BAllston%2FBrighton%2CBack_Bay%2CBeacon_Hill%2CDowntown%2CFenway%2CSouth_End%2CWest_End%5D")
+for (i in 1:length(links)){
+  link <- read_html(links[i])
+  
+  # 1. Extracting restaurant names:
+  node <- html_nodes(link, ".text-color--black-regular__373c0__38bRH.text-size--inherit__373c0__2gFQ3") # Returns the node containing rest. names
+  names <- gsub('[0-9]*[0-9][\\.]\\s', '', html_text(node)[-1]) # The first element is Advertisement, also removing the restaurant numbers before the names
+
+  # 2. Extracting restaurant phone numbers & addresses:
+  node <- html_nodes(link, ".text-align--right__373c0__3fmmn") # Returns the node containing phone/Address
+  phon.add <- html_text(node)[-1] # The first element is Advertisement
+  phon <- str_extract(phon.add, '[(][0-9]{3}[)] [0-9]{3}-[0-9]{4}')
+  add <- gsub('[(][0-9]{3}[)] [0-9]{3}-[0-9]{4}', '', phon.add)
+
+  # 3. Extarcting restaurant price rating & categories of service:
+  node <- html_nodes(link, ".priceCategory__373c0__3zW0R") # Returns the node containing price/categories
+  price.cats <- html_text(node)[-1] # The first element is Advertisement
+  price <- str_extract(price.cats, '[$]*')
+  cats <- gsub('[$]*', '', price.cats)
+
+  # 4. Extarcting restaurant review counts:
+  node <- html_nodes(link, ".reviewCount__373c0__2r4xT") # Returns the node containing review count
+  rev.count <- gsub(' review[s]*', '', html_text(node))[-1] # The first element is Advertisement
+  if (length(rev.count)==29){
+    rev.count <- gsub(' review[s]*', '', html_text(node))
+  }
+  
+  # Putting all info into a data frame:
+  all <- data.frame(restaurant.name=names,
+                    phone.number=phon,
+                    address=add,
+                    price=price,
+                    categories=cats,
+                    review.count=rev.count, stringsAsFactors=F)
+  # appending the new dataframe to the end of the rest:
+  rest.info <- rbind(rest.info, all)
+}
+
+head(rest.info, 5)
+```
+
+# 2. Scraping Yelp's website using import.io tool:
+
+2.1. I am using the free version of import.io which is limited to 1000 URLs pages per month:
+```{r pressure, echo=FALSE, fig.cap="Free tier of import.io", out.width = '70%', out.height='70%', fig.align='center'}
+knitr::include_graphics("C:/Users/alibs/Google Drive/Courses/DA 5020 - Collect, Store & Retrieve Data/Week 7 - Data Collection through Web Scraping and APIs/1. import.io free version.png")
+```
+
+2.2. You'll provide the link to the website and import.io automatically extract some information for you:
+```{r, echo=FALSE, fig.cap="Loading data", out.width = '70%', out.height='70%', fig.align='center'}
+knitr::include_graphics("C:/Users/alibs/Google Drive/Courses/DA 5020 - Collect, Store & Retrieve Data/Week 7 - Data Collection through Web Scraping and APIs/2. loding.data.png")
+```
+```{r, echo=FALSE, fig.cap="Initial results", out.width = '70%', out.height='70%', fig.align='center'}
+knitr::include_graphics("C:/Users/alibs/Google Drive/Courses/DA 5020 - Collect, Store & Retrieve Data/Week 7 - Data Collection through Web Scraping and APIs/3. init.png")
+```
+
+2.3. You can then customize the columns and add new info. This is done by selecting the elements on the website which contain your desirable info:
+```{r, echo=FALSE, fig.cap="Adding review.count column by selecting the corresponding element in the website using the designed selector", out.width = '70%', out.height='70%', fig.align='center'}
+knitr::include_graphics("C:/Users/alibs/Google Drive/Courses/DA 5020 - Collect, Store & Retrieve Data/Week 7 - Data Collection through Web Scraping and APIs/4.1.. adding columns.png")
+```
+
+2.4. After customizing our table, we can review the final results, generate the table and save it wit our desired output format. We can also schedule the scraping with this setting:
+```{r, echo=FALSE, fig.cap="Creating the report and setting the scraping frequency", out.width = '70%', out.height='70%', fig.align='center'}
+knitr::include_graphics("C:/Users/alibs/Google Drive/Courses/DA 5020 - Collect, Store & Retrieve Data/Week 7 - Data Collection through Web Scraping and APIs/6. saving.png")
+```
+```{r, echo=FALSE, fig.cap="Setting the output format and downloading the file to the disk", out.width = '70%', out.height='70%', fig.align='center'}
+knitr::include_graphics("C:/Users/alibs/Google Drive/Courses/DA 5020 - Collect, Store & Retrieve Data/Week 7 - Data Collection through Web Scraping and APIs/8. saving formats.png")
+```
+
+
+
+# 3. Questions:
+
+## Compare the tools with a focus on cost, ease of use, features, and your recommendation. Discuss your experience with the tools and why you decided to use the one you picked in the end:
+
+For my purpose both of the tools were free so the cost wasn't an issue. As discussed in the previous section however, import.io is only free for the first 1000 URL querries per month. Therefore, if we need more than that, we have to pay for it so here 'rvest' has the advantage since it is free.
+
+In terms of ease of use, import.io might have the advantage since it has a graphical user interface and it is perfect for the people who don't have any knowledge of programming and want to extract some information very quickly.
+
+For features, programming has advantage, since you can do anything if you can program yourself. In the end, import.io is a program itself with a gui on top of it.
+
+Personally, I prefer doing the programming myself. As you can see in the screen shots, even the data that has been extracted using import.io still need cleaning. I prefer to do that all in one step in a custom program that I have written myself. It is just faster and more efficient and it is free. I can extract as much data as I want with my own program.
+
+
+## Describe what you have derived about the URL for yelp pages. What are the differences between the three URLs? What are the parameters that determined your search query (Boston burger restaurants in 8 selected neighborhoods)? What is(are) the parameter(s) used for pagination? Without opening Yelp.com in the browser, what is your guess of the URL for the 7th page of Chinese restaurants in New York?
+
+There are a few distinct elements which makes the URLs for each page, I am going to explain them one by one:
+
+Take this url for the first page of the rsults:
+https://www.yelp.com/search?find_desc=burgers&find_loc=Boston%2C%20MA&l=p%3AMA%3ABoston%3A%3A%5BAllston%2FBrighton%2CBack_Bay%2CBeacon_Hill%2CDowntown%2CFenway%2CSouth_End%2CWest_End%5D
+
+after the https://www.yelp.com/ , the first element is: 'search?'
+Which shows that a search was initiated
+then, 'desc=burgers' shows that we have searched for burgers
+This search is more detailed later with more & statements:
+'&find_loc=Boston%2C%20MA&l=p%3AMA%3ABoston%3A%3A%5BAllston%2FBrighton%2CBack_Bay%2CBeacon_Hill%2CDowntown%2CFenway%2CSouth_End%2CWest_End%'
+We can see that these are all the neighborhoods in our search query
+
+This URL was for the first page, from the next pages, since we have 30 results displayed in each page, an element will be added to the end of the URLs '&start=30', with an & statement which indicates the starting number of the result. here it is 30 meaning that start this page's result from the 30th result of the search. The formula for it woul be: [(page number)-1]*30
+
+With these information, we can guess what would be the URL for the  the 7th page of Chinese restaurants in New York, it should be something like this:
+
+'https://www.yelp.com/search?find_desc=chinese&find_loc=New York%2C%20NY&start=180'
