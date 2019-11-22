@@ -1,0 +1,248 @@
+---
+title: "DA5020 - Week 8 Assignment Web Scraping Programaically"
+author: "Ali Banijamali"
+date: "29/10/2019"
+output: pdf_document
+---
+
+# 1. Retrieve the contents of the first webpage for the yelp search as specified in Assignment 7 and write R statements to answer the following questions on the retrieved contents:
+
+beginning by loading week 7 results from file and required libraries. Only the first page's data is required here so I am only extracting the results of the first page:
+```{r, echo=T, message=F, warning=F}
+# Required Packages:
+library('stringr')
+library('ggplot2')
+library('rvest')
+library('magrittr')
+library('tibble')
+
+rest.info <- read.csv('C:/Users/alibs/Google Drive/Courses/DA 5020 - Collect, Store & Retrieve Data/Week 8 - R Programming practice/HWK 8 - Web Scraping Practicum/week 7 data/rest.ino.csv', stringsAsFactors=F)
+```
+
+
+# 1.1. How many nodes are direct descendents of the HTML body element (the actual visible content of a web page)?
+```{r, echo=T, message=F, warning=F}
+yelp <- read_html("https://www.yelp.com/search?find_desc=burgers&find_loc=Boston%2C%20MA&l=p%3AMA%3ABoston%3A%3A%5BAllston%2FBrighton%2CBack_Bay%2CBeacon_Hill%2CDowntown%2CFenway%2CSouth_End%2CWest_End%5D")
+
+# List the children of the <html> element (the whole page):
+html_children(yelp)
+
+#//*[@id="yelp_main_body"]/svg
+#//*[@id="yelp_main_body"]
+
+# Get the root of the actual html body:
+body <- html_nodes(yelp, 'body')
+# Number of nodes descendent of <body>:
+node_list <- html_children(body)
+print(paste("Number of Nodes = ", length(node_list), sep=""))
+```
+
+# 1.2. What are the nodes names of the direct descendents of the body?
+
+```{r, echo=T, message=F, warning=F}
+for (i in 1:length(node_list)) {
+  print(node_list[[i]])
+}
+```
+
+# 1.3. How many of these direct descendents have an id attribute?
+
+```{r, echo=T, message=F, warning=F}
+# with_id_all_yelp <- html_nodes(yelp, xpath = '//*[@id]')
+# with_id_in_body <- html_nodes(yelp, xpath = '//body[@id]')
+
+# Get the root of the actual html body:
+body <- html_nodes(yelp, 'body')
+# Number of nodes descendent of <body>:
+node_list <- html_children(body)
+# Check whether we have id attribute in the nodes of <body>:
+id_list_in_body <- html_attr(node_list, 'id')
+# Count the 'id's:
+count_of_nodes_w_id_attr <- length(id_list_in_body[!is.na(id_list_in_body)])
+
+print(paste("Number of Nodes with an 'id' attribute in the <body> = ", count_of_nodes_w_id_attr, sep=""))
+```
+
+# 1.4. What is the css selector to select restaurants that are advertisements? (You may not see the ads if you are logged in on Yelp or have an ad blocker running.)
+
+```{r, echo=T, message=F, warning=F}
+# .border-color--default__373c0__2oFDT:nth-child(3) .arrange-unit-fill__373c0__17z0h > .border-color--default__373c0__2oFDT:nth-child(2) , .border-color--default__373c0__2oFDT:nth-child(3) .alternateStyling__373c0__2ithU , .border-color--default__373c0__2oFDT:nth-child(3) .border-color--default__373c0__2oFDT .border-color--default__373c0__2oFDT .arrange-unit__373c0__1piwO > .lemon--div__373c0__1mboc:nth-child(1) , .lemon--li__373c0__1r9wz:nth-child(2) .border-color--default__373c0__2oFDT
+```
+
+# 2. Modify following parameterized function get_yelp_sr_one_page to extract a list of businesses on Yelp, for a specific search keyword, a specific location and a specific page of results:
+
+As professor Arunagiri mentioned in her latest announcement, only the text availabel on the web page is extracted, not URLs, average reviews (which are images) and not zip code and cities.
+
+```{r, echo=T, message=F, warning=F}
+get_yelp_sr_requested_page <- function(keyword, loc="Boston,MA", page) {
+# Scrape Yelp’s search results page for a list of businesses
+# Args:
+# keyword: the keyword for a search query, the “&find_desc=” parameter
+# loc: the location to search for, the “&find_loc=” parameter in the url
+# page: Page number of the rsults
+# Return:
+# A data frame containing burger restaurant contents in one search results.
+  
+# parameterize the search results URL
+yelp_url <- 'https://www.yelp.com/search?find_desc=%s&find_loc=%s&start=%s'
+# sprintf replace “%s” with positional arguments following the string
+# URLencode ensures blank spaces in the keywords and location are
+# properly encoded, so that yelp will be able to recognize the URL
+page_start <- as.character((page-1)*30) # The results in that page will start from this number (30 results per page is the default)
+yelp_url <- sprintf(yelp_url, URLencode(keyword), URLencode(loc), URLencode(page_start))
+yelpsr <- read_html(yelp_url)
+
+names <- yelpsr %>% html_nodes(".text-color--black-regular__373c0__38bRH.text-size--inherit__373c0__2gFQ3")
+names <- gsub('[0-9]*[0-9][\\.]\\s', '', html_text(names)[-1])
+  
+price_cat <- html_nodes(yelpsr, ".priceCategory__373c0__3zW0R")
+price_cat <- html_text(price_cat)[-1]
+pricelevels <- str_extract(price_cat, '[$]*')
+servicecat <- gsub('[$]*', '', price_cat)
+
+phon.add <- html_nodes(yelpsr, ".text-align--right__373c0__3fmmn")
+phon.add <- html_text(phon.add)[-1]
+phon <- str_extract(phon.add, '[(][0-9]{3}[)] [0-9]{3}-[0-9]{4}')
+add <- gsub('[(][0-9]{3}[)] [0-9]{3}-[0-9]{4}', '', phon.add)
+city <- "Boston"
+state <- "MA"
+
+rev.node <- html_nodes(yelpsr, ".reviewCount__373c0__2r4xT")
+rev.count <- html_text(rev.node)[-1]
+rev.count <- gsub(' review[s]*', '', rev.count)
+if (length(rev.count)==29){
+    rev.count <- gsub(' review[s]*', '', html_text(rev.node))
+  }
+
+results <- tibble(name=names, price=pricelevels, service=servicecat, phone=phon, address=add, city=city, state=state, no.reviews=rev.count)
+
+# return a data frame
+return(results) }
+
+get_yelp_sr_requested_page("burgers", page=2)
+
+```
+
+# 3. Write a function that reads multiple pages of the search results of any search keyword and location from Yelp.
+
+This would be basically a modification of the previous function, here instead of requiring the page number as input, we require number of the first pages of the results:
+
+```{r, echo=T, message=F, warning=F}
+get_yelp_sr_pages <- function(keyword, loc="Boston,MA", number_of_pages) {
+# Scrape Yelp’s search results page for a list of businesses
+# Args:
+# keyword: the keyword for a search query, the “&find_desc=” parameter
+# loc: the location to search for, the “&find_loc=” parameter in the url
+# number_of_pages: We want the results up to this page
+# Return:
+# A data frame containing burger restaurant contents in one search results.
+
+yelp_url <- 'https://www.yelp.com/search?find_desc=%s&find_loc=%s&start=%s'
+results <- tibble(name=character(), price=character(), service=character(),
+                  phone=character(), address=character(), city=character(), state=character(),
+                  no.reviews=character())
+
+for (i in 1:number_of_pages) {
+  page_start <- as.character((i-1)*30)
+  yelp_url <- sprintf(yelp_url, URLencode(keyword), URLencode(loc), URLencode(page_start))
+  yelpsr <- read_html(yelp_url)
+  
+  names <- html_nodes(yelpsr, ".text-color--black-regular__373c0__38bRH.text-size--inherit__373c0__2gFQ3")
+  names <- gsub('[0-9]*[0-9][\\.]\\s', '', html_text(names)[-1])
+  
+  price_cat <- html_nodes(yelpsr, ".priceCategory__373c0__3zW0R")
+  price_cat <- html_text(price_cat)[-1]
+  pricelevels <- str_extract(price_cat, '[$]*')
+  servicecat <- gsub('[$]*', '', price_cat)
+
+  phon.add <- html_nodes(yelpsr, ".text-align--right__373c0__3fmmn")
+  phon.add <- html_text(phon.add)[-1]
+  phon <- str_extract(phon.add, '[(][0-9]{3}[)] [0-9]{3}-[0-9]{4}')
+  add <- gsub('[(][0-9]{3}[)] [0-9]{3}-[0-9]{4}', '', phon.add)
+  city <- "Boston"
+  state <- "MA"
+
+  rev.node <- html_nodes(yelpsr, ".reviewCount__373c0__2r4xT")
+  rev.count <- html_text(rev.node)[-1]
+  rev.count <- gsub(' review[s]*', '', rev.count)
+  if (length(rev.count)==29){
+    rev.count <- gsub(' review[s]*', '', html_text(rev.node))
+  }
+  
+  results.i <- tibble(name=names, price=pricelevels, service=servicecat,
+                      phone=phon, address=add, city=city, state=state, no.reviews=rev.count)
+  
+  # appending the new dataframe to the end of the rest:
+  results <- rbind(results, results.i)
+ }
+
+return(results)
+}
+
+# I'm letting the loc stay Boston, MA but we could change it to any other location
+res <- get_yelp_sr_pages('Burgers', number_of_pages=3)
+head(res, 5)
+```
+
+
+# 4. Optimize your function in question 3, add a small wait time (0.5s for example) between each request, so that you don’t get banned by Yelp for abusing their website.
+
+```{r, echo=T, message=F, warning=F}
+get_yelp_sr_pages <- function(keyword, loc="Boston,MA", number_of_pages) {
+# Scrape Yelp’s search results page for a list of businesses
+# Args:
+# keyword: the keyword for a search query, the “&find_desc=” parameter
+# loc: the location to search for, the “&find_loc=” parameter in the url
+# number_of_pages: We want the results up to this page
+# Return:
+# A data frame containing burger restaurant contents in one search results.
+
+yelp_url <- 'https://www.yelp.com/search?find_desc=%s&find_loc=%s&start=%s'
+results <- tibble(name=character(), price=character(), service=character(),
+                  phone=character(), address=character(), city=character(), state=character(),
+                  no.reviews=character())
+
+for (i in 1:number_of_pages) {
+  page_start <- as.character((i-1)*30)
+  yelp_url <- sprintf(yelp_url, URLencode(keyword), URLencode(loc), URLencode(page_start))
+  yelpsr <- read_html(yelp_url)
+  
+  names <- html_nodes(yelpsr, ".text-color--black-regular__373c0__38bRH.text-size--inherit__373c0__2gFQ3")
+  names <- gsub('[0-9]*[0-9][\\.]\\s', '', html_text(names)[-1])
+  
+  price_cat <- html_nodes(yelpsr, ".priceCategory__373c0__3zW0R")
+  price_cat <- html_text(price_cat)[-1]
+  pricelevels <- str_extract(price_cat, '[$]*')
+  servicecat <- gsub('[$]*', '', price_cat)
+
+  phon.add <- html_nodes(yelpsr, ".text-align--right__373c0__3fmmn")
+  phon.add <- html_text(phon.add)[-1]
+  phon <- str_extract(phon.add, '[(][0-9]{3}[)] [0-9]{3}-[0-9]{4}')
+  add <- gsub('[(][0-9]{3}[)] [0-9]{3}-[0-9]{4}', '', phon.add)
+  city <- "Boston"
+  state <- "MA"
+
+  rev.node <- html_nodes(yelpsr, ".reviewCount__373c0__2r4xT")
+  rev.count <- html_text(rev.node)[-1]
+  rev.count <- gsub(' review[s]*', '', rev.count)
+  if (length(rev.count)==29){
+    rev.count <- gsub(' review[s]*', '', html_text(rev.node))
+  }
+  
+  results.i <- tibble(name=names, price=pricelevels, service=servicecat,
+                      phone=phon, address=add, city=city, state=state, no.reviews=rev.count)
+  
+  # appending the new dataframe to the end of the rest:
+  results <- rbind(results, results.i)
+  
+  # Sleep for 2 seconds:
+  Sys.sleep(2)
+ }
+
+return(results)
+}
+
+# I'm letting the loc stay Boston, MA but we could change it to any other location
+res <- get_yelp_sr_pages('Burgers', number_of_pages=3)
+head(res, 5)
+```
