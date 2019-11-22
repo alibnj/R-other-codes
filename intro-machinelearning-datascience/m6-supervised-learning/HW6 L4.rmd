@@ -1,0 +1,138 @@
+---
+title: "Module 6 - Lesson 4"
+author: "Ali Banijamali"
+---
+
+#Questions:
+
+This homework assignment focuses on Linear Discriminant Analysis (LDA). You will provide a written analysis based on the following information:
+
+**First**, go to to the UC Irvine Machine Learning Repository and find a dataset for supervised classification. Every student MUST use a different dataset so you MUST get approved for which you can going to use. This can be the same dataset you used for the unsupervised clustering as long as the data has some labeled data. 
+
+**Next**, classify your data using LDA. 
+
+**Finally**, answer the following questions:
+
+Does the number of predictor variables for LDA make a difference? Try for a range of models using differing numbers of predictor variables.
+
+What determines the number of linear discriminants in LDA.
+
+Does scaling, normalization or leaving the data unscaled make a difference for LDA?
+
+
+#Answers:
+
+##First:
+
+I am using the *Bank Marketing* data set. The data is related with direct marketing campaigns of a Portuguese banking institution. The classification goal is to predict if the client will subscribe a term deposit (variable y). Let's first read the data:
+
+```{r, echo=FALSE}
+require(ggplot2)
+require(MASS)
+require(car)
+require(lda)
+```
+
+```{r}
+BM <- read.csv(file = "C:/Users/Ali/Desktop/DSCS 6030 - Intro to data Mining and Machine Learning/Module 6 - Supervised Learning/Assignments/DataSets/Bank Marketing Data Set/bank.csv",
+         header=TRUE, sep=";")
+
+I <- c("job", "marital", "education", "housing", "loan", "y","age", "balance", "duration", "pdays", "previous")
+BMF <- BM[I]
+
+head(BMF)
+summary(BMF)
+```
+
+##Next:
+
+Let's classify your data using LD. Based on desision tree classification the 2 most important numeric variabbles are duration and age; so I am considering these two variables for classification. Initially I am leaving the data unscaled and I am not normalizing it. We will later see the effect of normalizing and scaling.
+
+```{r}
+BMF.raw <- BM[c("duration", "age", "y")]
+BMF.lda <- lda(y ~ duration + age, data=BMF.raw)
+BMF.lda
+
+BMF.lda.pr <- predict(BMF.lda, newdata = BMF.raw[,c(1,2)])
+
+cmat.0 <- table(BMF.lda.pr$class, BMF.raw[,c(3)])
+cmat.0
+```
+
+Now let's try for different predictors:
+
+```{r}
+#------- duration and pdays:
+BMF.lda.1 <- lda(y ~ duration + pdays, data=BMF)
+BMF.lda.1
+
+BMF.lda.pr.1 <- predict(BMF.lda.1, newdata = BMF[,c(9,10)])
+
+cmat.1 <- table(BMF.lda.pr.1$class, BMF[,c(6)])
+cmat.1
+#--------------------------
+
+#----- duration and balance:
+BMF.lda.2 <- lda(y ~ duration + balance, data=BMF)
+BMF.lda.2
+
+BMF.lda.pr.2 <- predict(BMF.lda.2, newdata = BMF[,c(8,9)])
+
+cmat.2 <- table(BMF.lda.pr.2$class, BMF[,c(6)])
+cmat.2
+#--------------------------
+
+#---- duration and previous:
+BMF.lda.3 <- lda(y ~ duration + previous, data=BMF)
+BMF.lda.3
+
+BMF.lda.pr.3 <- predict(BMF.lda.3, newdata = BMF[,c(9,11)])
+
+cmat.3 <- table(BMF.lda.pr.3$class, BMF[,c(6)])
+cmat.3
+#--------------------------
+```
+
+Generally, the number of linear discriminant functions is equal to the number of levels minus 1. Which is one here and won't change with different predictors.
+
+Now let's see the effect of normalizing and scaling;
+
+First, Normalizing:
+
+```{r}
+normalize <- function(x) {return((x-min(x))/(max(x)-min(x)))}
+BM.norm <- BMF.raw
+
+BM.norm.1 <- as.data.frame(lapply(BM.norm[,c(1:2)], normalize))
+BM.norm[,c(1:2)] <- BM.norm.1
+
+BMF.lda.norm <- lda(y ~ duration + age, data=BM.norm)
+BMF.lda.norm
+
+BMF.lda.norm.pr <- predict(BMF.lda.norm, newdata = BM.norm[,c(1,2)])
+
+cmat.norm <- table(BMF.lda.norm.pr$class, BM.norm[,c(3)])
+cmat.norm
+```
+
+Second, Scaling:
+
+```{r}
+BM.sc <- BMF.raw
+
+BM.sc.1 <- as.data.frame(lapply(BM.sc[,c(1:2)], scale))
+BM.sc[,c(1:2)] <- BM.sc.1
+
+BMF.lda.sc <- lda(y ~ duration + age, data=BM.sc)
+BMF.lda.sc
+
+BMF.lda.sc.pr <- predict(BMF.lda.sc, newdata = BM.sc[,c(1,2)])
+
+cmat.sc <- table(BMF.lda.sc.pr$class, BM.sc[,c(3)])
+cmat.sc
+```
+
+As we can see here even scaling and normalizing don't have noticeable effects on the precision of the predictions.
+
+
+

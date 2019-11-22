@@ -1,0 +1,158 @@
+---
+title: "Module 6 - Lesson 3"
+author: "Ali Banijamali"
+---
+
+#Questions:
+
+This homework assignment focuses on Support Vector Machines (SVMs). You will provide a written analysis based on the following information:
+
+**First**, go to to the UC Irvine Machine Learning Repository and find a dataset for supervised classification. Every student MUST use a different dataset so you MUST get approved for which you can going to use. This can be the same dataset you used for the unsupervised clustering as long as the data has some labeled data.
+
+**Next**, classify your data using Support Vector Machines. You can use any method/package for SVMs 
+
+**Finally**, answer the following questions:
+
+How well does the classifier perform?
+
+Try different kernels. How do they effect its performce?
+
+What might improve its performce?
+
+
+#Answers:
+
+##First:
+
+I am using the *Bank Marketing* data set. The data is related with direct marketing campaigns of a Portuguese banking institution. The classification goal is to predict if the client will subscribe a term deposit (variable y). Let's first read the data:
+
+```{r, echo=FALSE}
+require(ggplot2)
+require(e1071)
+require(kernlab)
+```
+
+```{r}
+BM <- read.csv(file = "C:/Users/Ali/Desktop/DSCS 6030 - Intro to data Mining and Machine Learning/Module 6 - Supervised Learning/Assignments/DataSets/Bank Marketing Data Set/bank.csv",
+         header=TRUE, sep=";")
+
+I <- c("job", "marital", "education", "housing", "loan", "y","age", "balance", "duration", "pdays", "previous")
+BMF <- BM[I]
+
+head(BMF)
+summary(BMF)
+```
+
+##Next:
+
+Let's classify our data using Support Vector Machines. I am using the default cost of constraints violation initially which is 1 and linear kernel.
+
+```{r}
+#Selecting the most important factors of the data:
+BMF.du <- BM[c("duration", "age", "y")]
+
+#------------ Loop for turning the "y" column to integer 0/1 values
+#BMF.du$y <- as.character(BMF.du$y)
+
+#for (i in 1:4521)
+#  {
+#   if (BMF.du$y[i] == "yes") {BMF.du$y[i] <- 1}
+#   else {BMF.du$y[i] <- 0}
+#  }
+
+#BMF.du$y <- as.integer(BMF.du$y)
+#------------------------------------------------------------------
+
+BM.svm.lin <- svm(y~., data=BMF.du, kernal="linear", cost=1, scale=FALSE)
+summary(BM.svm.lin)
+plot(BM.svm.lin, BMF.du)
+```
+
+The classifier didn't do well at all. According to the plot no "Yes" region exist at all. Let's try different kernels:
+
+Linear vs. Polynomial vs. Radial Basis vs. Sigmoid.
+
+For each kernel (Except Linear which we just calculated), we first calculate using the default parameters and then we try to improve the results and find the best model:
+
+
+```{r}
+#---------Linear:
+#Choosing from the best cost:
+tune.lin <- tune(svm,y~., data=BMF.du,kernal="polynomial", ranges=list(cost=c(0.1,10,100,1000)), degree=c(0.5,1,2,3,4))
+summary(tune.lin)
+plot(tune.lin$best.model, BMF.du)
+#----------------
+
+#------Polynomial:
+BM.svm.pol <- svm(y~., data=BMF.du, kernal="polynomial", cost=1, degree=2, scale=FALSE)
+summary(BM.svm.pol)
+plot(BM.svm.pol, BMF.du)
+
+#Choosing from the best degree and cost:
+tune.pol <- tune(svm,y~., data=BMF.du,kernal="polynomial", ranges=list(cost=c(0.1,10,100,1000)), degree=c(0.5,1,2,3,4))
+summary(tune.pol)
+plot(tune.pol$best.model, BMF.du)
+#----------------
+
+#---Radial basis:
+BM.svm.rad <- svm(y~., data=BMF.du, kernal="radial basis", cost=1, gamma=1, scale=FALSE)
+summary(BM.svm.rad)
+plot(BM.svm.rad, BMF.du)
+
+#Choosing from the best gamma and cost:
+tune.rad <- tune(svm,y~., data=BMF.du,kernal="radial basis", ranges=list(cost=c(0.1,10,100,1000)), gamma=c(0.5,1,2,3,4))
+summary(tune.rad)
+plot(tune.rad$best.model, BMF.du)
+#----------------
+
+#--------Sigmoid:
+BM.svm.sig <- svm(y~., data=BMF.du, kernal="sigmoid", cost=1, gamma=1, coef0=0, scale=FALSE)
+summary(BM.svm.sig)
+plot(BM.svm.sig, BMF.du)
+
+#Choosing from the best gamma and cost:
+tune.sig <- tune(svm,y~., data=BMF.du,kernal="sigmoid", ranges=list(cost=c(0.1,10,100,1000)), gamma=c(0.5,1,2,3,4), coef0=c(0.5,1,2,3,4))
+summary(tune.sig)
+plot(tune.sig$best.model, BMF.du)
+#----------------
+```
+
+There is one other way to improve the results. Normalizing the data proved to be a good solution to improve the results in the previous models. Let's try normalizing here again:
+
+```{r}
+normalize <- function(x) {return((x-min(x))/(max(x)-min(x)))}
+BM.norm <- BMF.du
+
+BM.norm.1 <- as.data.frame(lapply(BM.norm[,c(1:2)], normalize))
+BM.norm[,c(1:2)] <- BM.norm.1
+```
+
+Now let's try all we did above, this time with normalized data:
+
+```{r}
+#---------Linear:
+tune.lin.norm <- tune(svm,y~., data=BM.norm,kernal="polynomial", ranges=list(cost=c(0.1,10,100,1000)), degree=c(0.5,1,2,3,4))
+summary(tune.lin)
+plot(tune.lin$best.model, BM.norm)
+#----------------
+
+#------Polynomial:
+tune.pol.norm <- tune(svm,y~., data=BM.norm,kernal="polynomial", ranges=list(cost=c(0.1,10,100,1000)), degree=c(0.5,1,2,3,4))
+summary(tune.pol)
+plot(tune.pol$best.model, BM.norm)
+#----------------
+
+#---Radial basis:
+tune.rad.norm <- tune(svm,y~., data=BM.norm,kernal="radial basis", ranges=list(cost=c(0.1,10,100,1000)), gamma=c(0.5,1,2,3,4))
+summary(tune.rad)
+plot(tune.rad$best.model, BM.norm)
+#----------------
+
+#--------Sigmoid:
+tune.sig.norm <- tune(svm,y~., data=BM.norm,kernal="sigmoid", ranges=list(cost=c(0.1,10,100,1000)), gamma=c(0.5,1,2,3,4), coef0=c(0.5,1,2,3,4))
+summary(tune.sig)
+plot(tune.sig$best.model, BM.norm)
+#----------------
+```
+
+This way we improved our results.

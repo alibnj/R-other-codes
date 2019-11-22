@@ -1,0 +1,172 @@
+---
+title: "Module 6 - Lesson 2"
+author: "Ali Banijamali"
+---
+
+#Questions:
+
+This homework assignment focuses on Text Mining theory. You will provide a written analysis based on the following information:
+
+Consider the text from Dr. Seuss below:
+
+"You have brains in your head. You have feet in your shoes. You can steer yourself in any direction you choose. You're on your own, and you know what you know. And you are the guy who'll decide where to go."
+
+Perform the following tasks (either by hand or in R):
+
+Create a term by document matrix for the Dr. Seuss quote. Assume each sentence is a new document.
+
+Calculate the td-idf for three terms in the text. Assume each sentence is a new document.
+
+Write a regular expression to segment the Dr. Seuss quote in to seperate sentences.
+
+Write a regular expression to tokenize the Dr. Seuss quote.
+
+Create a frequency signature for the Dr. Seuss quote. Assume each sentence is a new document.
+
+
+#Answers:
+
+##First:
+
+I have saved the text in a .txt file and I am reading it initially. I am using the following packages:
+
+```{r, echo=FALSE}
+install.packages("stringr") #for regular expression
+require(stringr)
+```
+
+```{r}
+DR <- file.path("You have brains in your head. You have feet in your shoes. You can steer yourself in any direction you choose. You're on your own, and you know what you know. And you are the guy who'll decide where to go.")
+```
+
+##Next:
+
+Let's now generate a decision tree. Our data is shuffled already so there is no need to shuffle it again. But I brought the required code here. I am using the C5.0 Model. More clarifications are brought during the code:
+
+```{r}
+#BMFS <- BMF[order(runif(nrow(BMF))),] #Our data is random itself, there is no need to shuffle it.
+
+table(BMF$y) #let's look at the answers
+
+#Setting the train and test data sets:
+BMF.train <- BMF[1:4000, ]
+BMF.test  <- BMF[4001:4521, ]
+
+#The proportion of train and test Y's:
+prop.table(table(BMF.train$y))
+prop.table(table(BMF.test$y))
+
+#Using C5.0 Model:
+#1. Training:
+DTr <- C5.0(BMF.train[-11], BMF.train$y) #Column 11 is the predictions. We are removing it.
+summary(DTr)
+
+#2. Predicting with the model:
+BMF.pred <- predict(DTr,BMF.test)
+summary(BMF.pred)
+#Evaluation table; Comparing the predictions vs. actual data:
+CrossTable(BMF.test$y, BMF.pred,
+           prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE,
+           dnn = c('actual type', 'predicted type'))
+```
+
+As we can see the results are not bad and not too good. Instead of changing the size of the whole data, I am changing the size of the training sets which I believe will have the same effect:
+
+```{r}
+#----- SIZE 1:
+
+BMF.train.s1 <- BMF[1:2000, ]
+BMF.test.s1  <- BMF[2001:4521, ]
+prop.table(table(BMF.train.s1$y))
+prop.table(table(BMF.test.s1$y))
+DTr.s1 <- C5.0(BMF.train.s1[-11], BMF.train.s1$y)
+summary(DTr.s1)
+BMF.pred.s1 <- predict(DTr.s1,BMF.test.s1)
+CrossTable(BMF.test.s1$y, BMF.pred.s1,
+           prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE,
+           dnn = c('actual type', 'predicted type'))
+
+#----- SIZE 2:
+
+BMF.train.s2 <- BMF[1:3000, ]
+BMF.test.s2  <- BMF[3001:4521, ]
+prop.table(table(BMF.train.s2$y))
+prop.table(table(BMF.test.s2$y))
+DTr.s2 <- C5.0(BMF.train.s2[-11], BMF.train.s2$y)
+summary(DTr.s2)
+BMF.pred.s2 <- predict(DTr.s2,BMF.test.s2)
+CrossTable(BMF.test.s2$y, BMF.pred.s2,
+           prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE,
+           dnn = c('actual type', 'predicted type'))
+
+#----- SIZE 3:
+
+BMF.train.s3 <- BMF[1:4300, ]
+BMF.test.s3  <- BMF[4301:4521, ]
+prop.table(table(BMF.train.s3$y))
+prop.table(table(BMF.test.s3$y))
+DTr.s3 <- C5.0(BMF.train.s3[-11], BMF.train.s3$y)
+summary(DTr.s3)
+BMF.pred.s3 <- predict(DTr.s3,BMF.test.s3)
+CrossTable(BMF.test.s3$y, BMF.pred.s3,
+           prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE,
+           dnn = c('actual type', 'predicted type'))
+```
+
+As we can see generally, increasing the size of the training set will decrease the error. However in the last size, the error increased which might be because of the distribuation of the data set at the end rows.
+
+The rule absolutely makes sense! the most important factor in convincing people to subscribe to the term deposit. The more the length of the call to the clients, the more the chance to convince them and this totally makes sense. On the other hand lets move forward we can see the other important factors are age and martial status. Which again makes sense. I did my justification based on the first training set.
+
+Now let's see if normalizing will change the accuracy of the predictions. In the previous model (kNN) we realized that normalizing the data had a great effect on improving the predictions:
+
+```{r}
+normalize <- function(x) {
+  return((x-min(x))/(max(x)-min(x)))
+}
+
+BM.norm <- BMF
+
+# Changing the order of columns; puting the factor columns first and integer columns next to simplify normalzing
+I1 <- c("job", "marital", "education", "housing", "loan", "y","age", "balance", "duration", "pdays", "previous")
+BM.norm <- BM[I1]
+
+# Adding the non-numeric values to the normalized values in one data frame together:
+BM.norm.1 <- as.data.frame(lapply(BM.norm[,c(7:11)], normalize))
+BM.norm[,c(7:11)] <- BM.norm.1
+
+# Generating the tree using the normalized data:
+BMF.train.norm <- BM.norm[1:2000, ]
+BMF.test.norm  <- BM.norm[2001:4521, ]
+prop.table(table(BMF.train.norm$y))
+prop.table(table(BMF.test.norm$y))
+DTr.norm <- C5.0(BMF.train.norm[-11], BMF.train.norm$y)
+summary(DTr.norm)
+BMF.pred.norm <- predict(DTr.norm,BMF.test.norm)
+CrossTable(BMF.test.norm$y, BMF.pred.norm,
+           prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE,
+           dnn = c('actual type', 'predicted type'))
+```
+
+Again as we saw previously, normalizing the data proves to be an important game changer. The error in the predictions has reduced to zero after normalizng. Next we are going to see the effect of scaling:
+
+```{r}
+I2 <- c("job", "marital", "education", "housing", "loan", "y","age", "balance", "duration", "pdays", "previous")
+BM.sc <- BM[I2]
+
+BM.sc.1 <- as.data.frame(lapply(BM.sc[,c(7:11)], scale))
+BM.sc[,c(7:11)] <- BM.sc.1
+
+BMF.train.sc <- BM.sc[1:2000, ]
+BMF.test.sc  <- BM.sc[2001:4521, ]
+prop.table(table(BMF.train.sc$y))
+prop.table(table(BMF.test.sc$y))
+DTr.sc <- C5.0(BMF.train.sc[-11], BMF.train.sc$y)
+summary(DTr.sc)
+BMF.pred.sc <- predict(DTr.sc,BMF.test.sc)
+CrossTable(BMF.test.sc$y, BMF.pred.sc,
+           prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE,
+           dnn = c('actual type', 'predicted type'))
+
+```
+
+As we can see, the scaling has a great effect too. It made the error zero. So both normalizing and scaling have great effect on the results.
