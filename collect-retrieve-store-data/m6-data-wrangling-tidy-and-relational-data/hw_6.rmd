@@ -1,0 +1,244 @@
+---
+title: "DA5020 - Week 6 Assignment Tidy and Relational Data Operations"
+author: "Ali Banijamali"
+date: "10/04/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+# Required Packages:
+library('stringr')
+library('tidyverse')
+library('tibble')
+library('ggplot2')
+library('viridis')
+```
+
+
+This week's assignment is about tidying up the structure of data collected by the US census. Load the Unemployment and Educational data files into R studio. One file contains yearly unemployment rates from 1970 to 2015, for counties in the US. The other file contains aggregated data percentages on the highest level of education achieved for each census member. The levels of education are: "less than a high school diploma", "high school diploma awarded", "attended some college", "college graduate and beyond". The census tracks the information at the county level and uses a fips number to represent a specific county within a U.S. state. The fips number is a 5 digit number where the first two digits of the fips number represents a U.S. state, while the last three digits represent a specific county within that state.  
+
+
+## Questions
+
+1. (20 points) Download the unemployment and education data files from blackboard and save the files to your working directory folder. Load both the unemployment data and the education data into R. Review the education data. Identify where variable names are actually values for a specific variable. Identify when multiple rows are data for the same entity. Identify when specific columns contain more than one atomic value. Tidy up the education data using spread, gather and separate.
+
+```{r, echo=T, message=F, warning=F}
+ed <- read.csv('C:/Users/alibs/Google Drive/Courses/DA 5020 - Collect, Store & Retrieve Data/Week 6 - Data wrangling tidy and relational data/FipsEducationsDA5020.csv', header=T, stringsAsFactors=F)
+
+em <- read.csv('C:/Users/alibs/Google Drive/Courses/DA 5020 - Collect, Store & Retrieve Data/Week 6 - Data wrangling tidy and relational data/FipsUnemploymentDA5020.csv', header=T, stringsAsFactors=F)
+
+# we can delete the rows with NULL value:
+ed[ed=='NULL'] <- NA
+ed.c1 <- ed[!(is.na(ed$fips)|is.na(ed$year)|is.na(ed$percent_measure)|
+                 is.na(ed$percent)|is.na(ed$county_state)|
+                 is.na(ed$rural_urban_cont_code)|is.na(ed$description)), ]
+head(ed.c1, 5)
+
+# To find the variable names:
+colnames(ed)
+
+# Checking if columns have more than one atomic value:
+lapply(ed, typeof)
+
+# I separated the county_state column, the values are actually in the opposite format
+ed.c2 <- separate(ed, county_state, into=c('state', 'county'))
+head(ed.c2, 5)
+# I could also simply rename that column's name:
+colnames(ed) <- c("fips", "year", "percent_measure", "percent", "state_county", "rural_urban_cont_code", "description")
+
+# > It looks like we can do sth about columns percent_measure and percent
+# > Yes, if we look at fips, we can see that states have same fips (multiple rows are data for the same
+# state/fips)
+# percent_measures can be columns with percent as value:
+ed.c3 <- spread(ed, key=percent_measure, value=percent)
+```
+
+
+
+2. (15 points) Break apart the education data into three distinct tibbles. One tibble named education contains the education data, another tibble named fips, contains the fips number definition, and the third tibble named rural_urban_code contains the textual description of the 9 different urban to rural data descriptions. These three tibbles must be linked together to represent the relationships between the tibbles. For example, the fips table will contain 3,192 rows, where each row represents the definition of a fips number (County, State). Each row in the education table will contain the educational attainment of a spcific county. It also will contain a fips number since this data is specific to a county within a state. 
+
+```{r, echo=T, message=F, warning=F}
+# Converting dta frame to tibble:
+ed.c <- as_tibble(ed.c3)
+
+# 1. The education data:
+education <- ed.c[, c(1:3, 6:9)]
+row.names(education) <- NULL
+# Note that these are for different years, we can devide this further for each year:
+education.1970 <- education[education$year=='1970', ]
+row.names(education.1970) <- NULL
+education.1980 <- education[education$year=='1980', ]
+row.names(education.1980) <- NULL
+education.1990 <- education[education$year=='1990', ]
+row.names(education.1990) <- NULL
+education.2000 <- education[education$year=='2000', ]
+row.names(education.2000) <- NULL
+education.2015 <- education[education$year=='2015', ]
+row.names(education.2015) <- NULL
+# The other way to do this is to get the averages of educational attainments for each fips:
+education.ave <- select(ed.c,fips,percent_four_plus_years_college,percent_has_some_college,percent_hs_diploma,`percent_less than_hs_diploma`) %>%
+group_by(fips) %>%
+summarise_each(funs(mean), ave.four_plus_years_college=percent_four_plus_years_college, ave.percent_has_some_college=percent_has_some_college, ave.percent_hs_diploma=percent_hs_diploma, ave.percent_less_than_hs_diploma=`percent_less than_hs_diploma`)
+  
+
+
+# 2. The fips number definition:
+fips <- unique(ed.c[, c('fips', 'state_county')])
+row.names(fips) <- NULL
+
+# 3. Textural description  of the 9 different urban to rural data descriptions:
+
+rural_urban_code <- unique(ed.c1[, c('rural_urban_cont_code', 'description')])
+rural_urban_code <- rural_urban_code[order(as.numeric(rural_urban_code$rural_urban_cont_code)), ]
+row.names(rural_urban_code) <- NULL
+```
+
+
+
+3. (5 points) Answer the following questions about your tibbles: The fips column in the education table - is it a foreign or a primary key for the education tibble?  What is the primary key for your education tibble? The rural_urban code tibble should only contain 9 rows. What is its primary key?
+
+- This question is very vague in my opinion. It really depends on how you make the education table! If we have counties in the data frame, The primary key can be the counties and the fips will be foreign. The fips are the codes assigned to the counties and we can match the counties information with them.
+
+- For rural_urban, rural_urban_cont_code is the primary key
+
+
+
+4. (50 points) Write expressions to answer the following queries: 
++ 4.0 In the year 1970, what is the percent of the population not attaining a high school diploma for the Nantucket county in Massachusetts? What about the year 2015?
++ 4.1 What is the average percentage not receiving a high school diploma for the counties in Alabama for the year 2015?
++ 4.2 What is the average percentage of college graduates for the counties in the state of Massachusetts for the year 2015?
++ 4.3 Determine the average percentage of population not attaining a high school diploma for the counties in Alabama for each year within the dataset. The result should return the calendar year and the average percentage not attaining a high school diploma for that year.
++ 4.4 What is the most common rural_urban code for the U.S. counties?
++ 4.5 Which counties have not been coded with a rural urban code? Return a result that contains two fields: County, State for the counties that have not been assigned a rural urban code. Do not return duplicate values in the result. Order the result alphabetically by state. What does this result set represent?
++ 4.6 What is the minimal percentage of college graduates for the counties in the state of Mississippi for the year 2010? What does the result represent?
++ 4.7 In the year 2015, which fip counties, are above the average unemployment rate? Provide the county name, U.S. state name and the unemployment rate in the result. Sort in descending order by unemployment rate. 
++ 4.8 In the year 2015, which fip counties, U.S. states contain a higher percentage of unemployed citizens than the percentage of college graduates? List the county name and the state name. Order the result alphabetically by state.
++ 4.9 Return the county, U.S. state and year that contains the highest percentage of college graduates in this dataset?
+
+```{r, echo=T, message=F, warning=F}
+# 4.0:
+education.1970[education.1970$state_county=='MA | Nantucket County', 'percent_less than_hs_diploma']
+education.2015[education.2015$state_county=='MA | Nantucket County', 'percent_less than_hs_diploma']
+
+# 4.1.:
+education.2015 <- as.data.frame(education.2015)
+mean(education.2015[grep('^AL.*', education.2015$state_county), 'percent_less than_hs_diploma'], na.rm=T)
+
+# 4.2.:
+mean(education.2015[grep('^MA.*', education.2015$state_county), 'percent_four_plus_years_college'], na.rm=T)
+
+# 4.3.:
+education <- as.data.frame(education)
+edu.al <- education[grep('^AL.*', education.2015$state_county), ]
+a <- group_by(edu.al, year)
+alabama.edu <- summarize(a, percentage_wo_highschool_diploma=mean(`percent_less than_hs_diploma`))
+
+# 4.4.:
+rural_code_freq <- as.data.frame(table(ed.c$rural_urban_cont_code))
+rural_code_freq[rural_code_freq$Freq == max(rural_code_freq$Freq), 'Var1']
+
+# 4.5.:
+wo_urban_code <- ed.c[is.na(ed.c$rural_urban_cont_code), 'state_county']
+# It must have 2 columns: County - State
+wo_urban_code <- separate(wo_urban_code, state_county, into=c('State', 'County'))
+# Removing duplicates:
+wo_urban_code <- unique(wo_urban_code)
+# This dataframe is already ordered alphabetically, if it wasn't this is how to do it:
+wo_urban_code <- wo_urban_code[order(wo_urban_code$State), ]
+# It says that these rural parts are not actually counties! They are names of the states or
+#other irrelevnt names and it makes sense for them to not have a rural code
+
+# 4.6.:
+# !! WE DON'T HAVE YEAR 2010! I ASSUME YOU MEANT 2015: !!
+min(education.2015[grep('^MS.*', education.2015$state_county), 'percent_four_plus_years_college'])
+max(education.2015[grep('^MS.*', education.2015$state_county), 'percent_four_plus_years_college'])
+mean(education.2015[grep('^MS.*', education.2015$state_county), 'percent_four_plus_years_college'])
+# If we go by the question, the result impies that we don't have data for the year 2010,
+# other than that, it implies that it was %7.2.
+
+# 4.7.:
+ave_unemployment_rate_2015 <- mean(em[em$year==2015, 'percent_unemployed'], na.rm=T)
+fips_above_ave <- em[em$percent_unemployed>ave_unemployment_rate_2015 & em$year==2015, c('fips', 'percent_unemployed')]
+# Matching fips with county/state-s:
+# I have fips for countys in "fips" data frame, I'm using that to match the fips in
+# fips_above_ave with their respective counties
+unemp_above_ave <- inner_join(fips_above_ave, fips, by='fips')
+# we can separate states from counties:
+unemp_above_ave <- separate(unemp_above_ave, state_county, into=c('State', 'County'))
+# Sorting based on unemp rate (Descending):
+unemp_above_ave <- unemp_above_ave[order(-unemp_above_ave$percent_unemployed), ]
+row.names(unemp_above_ave) <- NULL
+
+# 4.8.:
+em.2015 <- em[em$year==2015, ]
+row.names(em.2015) <- NULL
+emp.edu.2015 <- inner_join(em.2015[c('fips', 'percent_unemployed')], education.2015, by="fips")
+unemp.gt.colgrads <- as.data.frame(emp.edu.2015[emp.edu.2015$percent_unemployed>emp.edu.2015$percent_four_plus_years_college, 'state_county'])
+unemp.gt.colgrads <- separate(unemp.gt.colgrads, colnames(unemp.gt.colgrads), into=c('State', 'County'))
+# Here again the data frame is sorted alphabetically itself, however this is the way to do it if it wasn't:
+unemp.gt.colgrads <- unemp.gt.colgrads[order(unemp.gt.colgrads$State), ]
+row.names(unemp.gt.colgrads) <- NULL
+
+# 4.9.:
+# county/US State w highest col-grad rate:
+ed.c[ed.c$percent_four_plus_years_college==max(ed.c$percent_four_plus_years_college), c('year', 'state_county')]
+```
+
+
+
+5. (10 points) _Open question_: explore the unemployment rate and the percent not attaining a high school diploma over the time period in common for the two datasets. What can you discover? Create a plot that supports your discovery.
+
+```{r, echo=T, message=F, warning=F}
+years.em <- unique(em$year)
+years.ed <- unique(ed.c$year)
+common_years <- intersect(years.em, years.ed)
+# The only year in common is 2015
+# I assume you meant to this separately:
+# Less than diploma:
+LTdiploma.overtime <- data.frame(year=integer(length(years.ed)),
+                                less_than_diploma_rate=numeric(length(years.ed)),
+                                stringsAsFactors=F)
+for (i in 1:length(years.ed)) {
+  LTdiploma.overtime[i, 'year'] <- years.ed[i]
+  LTdiploma.overtime[i, 'less_than_diploma_rate'] <- mean(unlist(ed.c[ed.c$year==years.ed[i], 'percent_less than_hs_diploma']))
+}
+
+# Unemployment rate:
+unemp.overtime <- data.frame(year=integer(length(years.em)),
+                                unemployment_rate=numeric(length(years.em)),
+                                stringsAsFactors=F)
+for (i in 1:length(years.em)) {
+  unemp.overtime[i, 'year'] <- years.em[i]
+  unemp.overtime[i, 'unemployment_rate'] <- mean(unlist(em[em$year==years.em[i], 'percent_unemployed']), na.rm=T)
+}
+
+# Plots:
+# Education:
+ggplot(data=LTdiploma.overtime, mapping=aes(x=year, y=less_than_diploma_rate,
+                                             fill=LTdiploma.overtime[, 'less_than_diploma_rate']))+
+  geom_bar(stat="identity", width=0.1)+
+  xlab("Year")+
+  ylab("Less than Diploma Education")+
+  theme(legend.title = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank())+
+  scale_fill_viridis(option='plasma', direction=1)
+
+# Unemployment:
+ggplot(data=unemp.overtime, mapping=aes(x=year, y=unemployment_rate,
+                                             fill=unemp.overtime[, 'unemployment_rate']))+
+  geom_bar(stat="identity", width=0.1)+
+  xlab("Year")+
+  ylab("Unemployment Rate")+
+  theme(legend.title = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank())+
+  scale_fill_viridis(option='plasma', direction=1)
+
+# As we can see the rate of education has increased since 1970
+# For the unemployment rate, it has increased from 2007 to 2010 and then after that it has constantly
+# decreased until 2015
+```
+
+## Submission
+You need to submit an .Rmd extension file as well as the generated pdf file. Be sure to state all the assumptions and give explanations as comments in the .Rmd file wherever needed to help us assess your submission. Please name the submission file LAST_FirstInitial_1.Rmd for example for John Smith's 1st assignment, the file should be named Smith_J_1.Rmd. 
