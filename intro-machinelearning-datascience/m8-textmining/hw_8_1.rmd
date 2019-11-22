@@ -1,0 +1,178 @@
+* Create a term by document matrix for the Dr. Seuss quote. Assume each sentence is a new documment. 
+
+```{r}
+str<-c("You have brains in your head."," You have feet in your shoes.","You can steer yourself in any direction you choose.","You're on your own,","and you know what you know.","And you are the guy who'll decide where to go.",
+"Dr. Seuss")
+str
+grep(".",str)
+str<-gsub("\\.", "", str)  ## removing DOT
+str
+
+seuss.corpus <- Corpus(DataframeSource(data.frame(str)))
+seuss.corpus
+
+inspect(seuss.corpus)
+
+# Eliminating Extra Whitespace
+seuss.clean<-tm_map(seuss.corpus, stripWhitespace)
+# stemDocument
+seuss.clean.stem<-tm_map(seuss.clean, stemDocument)
+
+writeLines(as.character(seuss.clean.stem[1]))
+
+seuss.clean.lc <- tm_map(seuss.clean, content_transformer(tolower))
+writeLines(as.character(seuss.clean.lc[1]))
+
+#seuss.clean <- tm_map(seuss.clean.lc, removeWords, stopwords("english"))
+writeLines(as.character(seuss.clean.lc[1]))
+
+
+seuss.tdm <- TermDocumentMatrix(seuss.clean, control = list(minWordLength = 1))
+seuss.tdm
+
+
+inspect(seuss.tdm)
+
+
+
+```
+
+
+* Calculate the td-idf for three terms in the text. Assume each sentence is a new documment. 
+
+We choose :  "you", "shoes" and "know":
+
+
+
+
+```{r}
+
+search_word<-function(w,d)
+{
+  if(as.numeric(gregexpr(w,d)[[1]])==0)
+  {return(0)}
+  else{
+  return(length(as.numeric(gregexpr(w,d)[[1]])))
+  }
+}
+
+
+
+###############
+w="you"
+you=c()
+for (i in 1:7)
+{
+  you[i]<-search_word(w,str[i])
+}
+you
+################
+w="shoes"
+shoes=c()
+for (i in 1:7)
+{
+  shoes[i]<-search_word(w,str[i])
+}
+shoes
+###############
+w="know"
+know=c()
+for (i in 1:7)
+{
+  know[i]<-search_word(w,str[i])
+}
+know
+###############
+#Claculating tf-idf
+
+tf<-function(w,D)
+{
+  h<-c()
+  f<-c()
+  for (i in (1:length(D)))
+  {
+    h[i]<-search_word(w,D[i])
+  }
+  H<-max(h)
+  for (i in (1:length(D)))
+  {
+    f[i]<-0.5+((0.5*h[i])/H)
+  }
+  return(f)
+}
+
+idf<-function(w,D)
+{
+  N<-length(D)
+  for (i in (1:length(D)))
+  {
+    h[i]<-search_word(w,D[i])
+    
+  
+  }
+  m<-sum(h>0)
+  return(log10(N/m))
+}
+
+tf_idf<-function(w,D)
+{
+  return(tf(w,D)*idf(w,D))
+}
+
+###########
+D<-str
+
+tf("you",D)
+idf("you",D)
+tf_idf("you",D)
+
+tf("shoes",D)
+idf("shoes",D)
+tf_idf("shoes",D)
+
+tf("know",D)
+idf("know",D)
+tf_idf("know",D)
+
+##############
+```
+
+Write a regular expression to segment the Dr. Seuss quote in to seperate sentences. 
+
+```{r}
+
+s<-strsplit(str," ") 
+s
+```
+
+```{r}
+
+
+
+```
+
+
+
+* Write a regular expression to segment the Dr. Seuss quote in to seperate sentences. 
+
+```{r}
+seuss<-"You have brains in your head. You have feet in your shoes. You can steer yourself in any direction you choose. You're on your own, and you know what you know. And you are the guy who'll decide where to go."
+
+s_split<-strsplit(seuss,"\\.[ ]+") 
+s_split
+```
+
+
+* Write a regular expression to tokenize the Dr. Seuss quote.     
+```{r}
+
+s_token<-strsplit(seuss,"[ ]+") 
+s_token
+```
+
+
+* Create a frequency signature for the Dr. Seuss quote. Assume each sentence is a new documment. 
+
+```{r}
+
+
