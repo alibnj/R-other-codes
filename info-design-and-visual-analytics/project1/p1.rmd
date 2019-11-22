@@ -1,0 +1,113 @@
+---
+title: "My Digital Shadow"
+author: "Ali Banijamali"
+date: "9/22/2019"
+output: html_document
+---
+
+```{r, include=F, message=F, warning=F}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Reading the data:
+Reading the data and loading the required packages.
+```{r, echo=T, message=F, warning=F}
+library('rmarkdown')
+library('ggplot2')
+library('stringr')
+library('viridis') # for it's color palettes
+
+fit.daily <- read.csv('C:/Users/alibs/Google Drive/Courses/INSH 5302 - Info Design & Visual Analytics/Project 1/Takeout/Fit/Daily Aggregations/2019-09-11.csv', header=T, stringsAsFactors=F) # for Sep 2019
+fit.all <- read.csv('C:/Users/alibs/Google Drive/Courses/INSH 5302 - Info Design & Visual Analytics/Project 1/Takeout/Fit/Daily Aggregations/Daily Summaries.csv', header=T, stringsAsFactors=F)
+temp <- read.csv('C:/Users/alibs/Google Drive/Courses/INSH 5302 - Info Design & Visual Analytics/Project 1/Takeout/Fit/Temperature/2019tempF.csv', header=F, stringsAsFactors=F)
+```
+
+## Extracting information from data:
+Since I wanted to compare my activity vs. average temperature at each month, I had to download the temperature data for the past year from https://weather.com/ and clean and organize it's data first.
+```{r, echo=T, message=F, warning=F}
+## Temperature data for all months:
+
+# Removing degree (°) from the data:
+temp <- as.data.frame(lapply(temp, gsub, pattern='°', replacement=''), stringsAsFactors=F)
+
+# Make a data frame with min, max and ave temperature for all days:
+temp_data <- data.frame(month=numeric(9*31),
+                        day=numeric(9*31),
+                        min.temp.F=numeric(9*31),
+                        max.temp.F=numeric(9*31),
+                        ave.temp.F=double(9*31), stringsAsFactors=F)
+k <- 1
+for (i in seq(1, 9)) {
+  for (j in seq(1, 31)){
+    temp_data[k, 'month'] <- i
+    temp_data[k, 'day'] <- temp[(3*j)-2, i]
+    temp_data[k, 'min.temp.F'] <- temp[(3*j)-1, i]
+    temp_data[k, 'max.temp.F'] <- temp[(3*j), i]
+    temp_data[k, 'ave.temp.F'] <- mean(as.integer(c(temp[(3*j)-1, i], temp[(3*j), i])), na.rm=T)
+    k = k+1
+  }
+}
+temp_data <- na.omit(temp_data)
+
+# Finding per month info:
+monthly.info <- data.frame(month=character(9),
+                        step.count=integer(9),
+                        ave.speed=double(9),
+                        walk.duration=double(9), stringsAsFactors=F)
+
+# Get the list of months with number of days for which we have record:
+fit.all <- fit.all[!(str_sub(fit.all$Date, 1, 4)=='2018'),] # we don't want tha data from 2018
+row.names(fit.all) <- NULL # reset row indices
+months <- as.data.frame(table(str_sub(fit.all$Date, 1, 7))) #str_sub: Select first 7 chars
+colnames(months) <- c('month', 'day.count')
+
+for (i in seq(1, 9)) {
+  month_data <- fit.all[str_starts(fit.all$Date, as.character(months$month[i])), ]
+  monthly.info[i, 'month'] <- as.character(months$month[i])
+  monthly.info[i, 'step.count'] <- sum(month_data$Step.count, na.rm=T)
+  monthly.info[i, 'ave.speed'] <- mean(month_data$Average.speed..m.s., na.rm=T)
+  monthly.info[i, 'walk.duration'] <- sum(month_data$Walking.duration..ms., na.rm=T)/(60000*months[i, 'day.count']) # in minutes/day
+  monthly.info[i, 'ave.temp'] <- mean(temp_data[temp_data$month==i, 'ave.temp.F'], na.rm=T)
+}
+```
+
+
+## Visualization:
+#### Average speed vs. months:
+
+```{r, echo=T}
+ggplot(data=monthly.info[1:8, ], mapping=aes(x=month, y=ave.speed, color=monthly.info[1:8, 'ave.speed']))+
+  geom_point(size=10)+
+  xlab("Date in month")+
+  ylab("Average Speed [m/s]")+
+  theme(legend.title = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank())+
+scale_color_gradientn(colours = inferno(10, direction=-1)) # direction -1: colors from light to dark
+```
+
+#### Number of steps vs. months and average temperature:
+
+```{r, echo=T}
+ggplot(data=monthly.info[1:8, ], mapping=aes(x=month, y=step.count, color=monthly.info[1:8, 'ave.temp']))+
+  geom_point(size=10)+
+  xlab("Average tempeature")+
+  ylab("Number of Steps")+
+  theme(legend.title = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank())+
+  scale_color_gradientn(colours = cm.colors(5))
+```
+
+#### Average Walking duration per day [min] vs. months:
+
+```{r, echo=T}
+ggplot(data=monthly.info[1:8, ], mapping=aes(x=month, y=walk.duration, color=monthly.info[1:8, 'walk.duration']))+
+  geom_point(size=10)+
+  xlab("Date")+
+  ylab("Walking Duration/day [min]")+
+  theme(legend.title = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank())+
+  scale_color_gradientn(colours = viridis(5))
+```
