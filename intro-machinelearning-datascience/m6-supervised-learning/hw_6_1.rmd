@@ -1,0 +1,157 @@
+---
+title: "Module 6 - Lesson 1"
+author: "Ali Banijamali"
+---
+
+#Questions:
+
+This homework assignment focuses on k-Nearest Neighbors. You will provide a written analysis based on the following information:
+
+**First**, go to to the UC Irvine Machine Learning Repository and find a dataset for supervised classification. Every student MUST use a different dataset so you MUST get approved for which you can going to use. This can be the same dataset you used for the unsupervised clustering as long as the data has some labeled data.
+
+**Next**, classify your data using k-Nearest Neighbors.
+
+**Finally**, answer the following questions:
+
+Does the k for kNN make a difference? Try for a range of values of k.
+
+Does scaling, normalization or leaving the data unscaled make a difference for kNN? Why or Why not?
+
+
+#Answers:
+
+##First:
+
+I am using the *Bank Marketing* data set. The data is related with direct marketing campaigns of a Portuguese banking institution. The classification goal is to predict if the client will subscribe a term deposit (variable y). Let's first read the data:
+
+```{r}
+BM <- read.csv(file = "C:/Users/Ali/Desktop/DSCS 6030 - Intro to data Mining and Machine Learning/Module 6 - Supervised Learning/Assignments/DataSets/Bank Marketing Data Set/bank.csv",
+         header=TRUE, sep=";")
+head(BM)
+summary(BM)
+```
+
+##Next:
+
+Let's now classify our data using k-Nearest Neighbors. The data is shuffled itself and there is no need for us to do that.
+
+```{r, echo=FALSE}
+require(ggplot2)
+require(class)
+```
+
+Let's first plot some columns of data to see which one is better clustered:
+
+```{r}
+qplot(BM$age, BM$balance, data=BM)+geom_point(aes(colour = factor(BM$y), shape = factor(BM$y)))
+qplot(BM$age, BM$job, data=BM)+geom_point(aes(colour = factor(BM$y), shape = factor(BM$y)))
+qplot(BM$job, BM$balance, data=BM)+geom_point(aes(colour = factor(BM$y), shape = factor(BM$y)))
+qplot(BM$duration, BM$balance, data=BM)+geom_point(aes(colour = factor(BM$y), shape = factor(BM$y)))
+qplot(BM$day, BM$balance, data=BM)+geom_point(aes(colour = factor(BM$y), shape = factor(BM$y)))
+```
+
+As we can see, none of these plots show that this data set is clearly clustered. However I chose this data set because I thought that it might be a good set for the decision tree assignment.
+
+There is another thing that we should do first. As it turned out, knn is not reading the yes/no character levels in the factors as target labels, so I had to figure out a way to change them to numeric values of (1/0) respectively: I initially added two new levels (1 and 0) and then replaced (Yes/No) with them and then removed the unused (Yes/No) levels.
+
+We initially use k=3 and without normalizing and scaling:
+
+```{r}
+I <- c("age", "balance", "duration", "pdays", "previous", "y")
+BMF <- BM[I]
+
+levels(BMF$y) <- c(levels(BMF$y), "0") #Creating new levels
+levels(BMF$y) <- c(levels(BMF$y), "1") #Creating new levels
+
+BMF$y[BMF$y=="yes"] <- 1 #Replacing the yes/no level with 0/1
+BMF$y[BMF$y=="no"] <- 0  #Replacing the yes/no level with 0/1
+
+BMF$y <- droplevels(BMF$y) #Removing unused levels (yes/no)
+
+BM.train <- BMF[1:4000,]
+BM.test <- BMF[4001:4521,]
+BM.train.target <- BMF[1:4000,c(6)]
+BM.test.target <- BMF[4001:4521,c(6)]
+
+k1 <- 3
+knn.3 <- knn(train = BM.train, BM.test,BM.train.target, k1)
+knn.3
+
+cmat3 <- table(BM.test.target, knn.3)
+cmat3
+```
+
+We can see that it didn't really gives us good results. Most of the Customers with a positive answer here are predicted with a negative answer. Now let's change k to 5, 7 and 9 and see the results:
+
+```{r}
+k2 <- 5
+knn.5 <- knn(train = BM.train, BM.test, BM.train.target,k2)
+knn.5
+
+cmat5 <- table(BM.test.target, knn.5)
+cmat5
+
+k3 <- 7
+knn.7 <- knn(train = BM.train, BM.test, BM.train.target,k3)
+knn.7
+
+cmat7 <- table(BM.test.target, knn.7)
+cmat7
+
+k4 <- 9
+knn.9 <- knn(train = BM.train, BM.test, BM.train.target, k4)
+knn.9
+
+cmat9 <- table(BM.test.target, knn.9)
+cmat9
+```
+
+We can see that it predicts the no-s better and predicts yes-s worse. So we can't say that it really had a better or worse effect to increase k. However we weren't expecting a very good result either because the 2 categories were too mixed and it was not easy to separate them any way.
+
+In general choosing a larger k seems to be more precise as it reduces the noise, but it can't be always ture as we saw here.
+
+Now lets try normalizing and scaling with k=3:
+
+```{r}
+normalize <- function(x) {
+  return((x-min(x))/(max(x)-min(x)))
+}
+
+BM.norm <- as.data.frame(lapply(BMF[,c(1:5)], normalize))
+BM.norm[, "Y"] <- BMF$y #Adding the last column to the normalized dataframe. It was factor so it wasn't normalized
+head(BM.norm)
+
+BM.norm.train <- BM.norm[1:4000,]
+BM.norm.test <- BM.norm[4001:4521,]
+BM.norm.train.target <- BM.norm[1:4000, c(6)]
+BM.norm.test.target <- BM.norm[4001:4521, c(6)]
+
+knn.norm <- knn(train = BM.norm.train, BM.norm.test, BM.norm.train.target, k1)
+knn.norm
+
+cmat.norm <- table(BM.norm.test.target, knn.norm)
+cmat.norm
+```
+
+Well as we can see the result of normalizing is incredible. It guessed everything correctly! I am surprised!
+
+Now let's scale the data with k=3:
+
+```{r}
+BM.sc<-as.data.frame(lapply(BMF[,c(1:5)], scale))
+BM.sc[, "Y"] <- BMF$y #Adding the last column to the scaled dataframe. It was factor so it wasn't scaled
+head(BM.sc)
+
+BM.sc.train <- BM.sc[1:4000,]
+BM.sc.test <- BM.sc[4001:4521,]
+BM.sc.train.target <- BM.sc[1:4000, c(6)]
+BM.sc.test.target <- BM.sc[4001:4521, c(6)]
+
+knn.sc <- knn(train = BM.sc.train, BM.sc.test, BM.sc.train.target, k1)
+knn.sc
+
+cmat.sc <- table(BM.sc.test.target, knn.sc)
+cmat.sc
+```
+
+As we can see scaling also noticeably improved the results but not as good as normalizing. Overally we conclude that normalizing and scaling can have a tremendous effect on bettering the results.
