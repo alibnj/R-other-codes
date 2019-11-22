@@ -1,0 +1,121 @@
+---
+title: "Ali Banijamali - HW 2"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#install.packages('rmarkdown')
+#install.packages('dplyr')
+library('rmarkdown')
+library('dplyr')
+
+surveys <- read.csv("C:/Users/alibs/Google Drive/Courses/DA 5020 - Collect, Store & Retrieve Data/Week 2 - Data transformation in R/HW 2/surveys.csv", header = T, sep = ",")
+```
+
+## Question 1
+
+```{r, echo=T}
+surveys_tb <- tbl_df(surveys) # To use filter() it has to be in tbl format
+surveys_filt <- filter(surveys_tb, year==1990 & month==(1 & 2 & 3))
+```
+
+
+## Question 2
+
+```{r, echo=T}
+surveys_recID <- surveys[order(-surveys$record_id, na.last=T), ]
+surveys_weight <- surveys[order(surveys$weight, na.last=T), ]
+```
+
+
+## Question 3
+
+```{r, echo=T}
+surveys_RO <- surveys[surveys$species_id=='RO', c("record_id", "sex", "weight")]
+```
+
+
+## Question 4
+
+```{r, echo=T}
+surveys_DM <- surveys[surveys$species_id=='DM', c("weight", "hindfoot_length", "month")]
+
+for (i in seq(1, 12)) {
+  print(paste('Average weight for month', i, '=', mean(surveys_DM[surveys_DM$month==i, "weight"], na.rm=T)))
+  print(paste('Average Hindfoot Length for month', i, '=', mean(surveys_DM[surveys_DM$month==i, "hindfoot_length"], na.rm=T)))
+}
+```
+
+
+## Question 5
+
+```{r, echo=T}
+surveys_1990 <- surveys[surveys$year==1990, ]
+table(surveys_1990$species_id)
+```
+
+
+## Question 6
+
+```{r, echo=T}
+#install.packages('gapminder')
+library('gapminder')
+
+gapminder_df <- as.data.frame(gapminder)
+gapminder_df_gdp <- cbind(gapminder_df, GDP=gapminder_df$pop*gapminder_df$gdpPercap)
+```
+
+
+## Question 7
+
+```{r, echo=T}
+mean(gapminder_df_gdp[gapminder_df_gdp$country=='Cambodia', "GDP"], na.rm=T)
+```
+
+
+## Question 8
+
+```{r, echo=T}
+country_list <- as.character(unique(gapminder_df[gapminder_df$continent=='Asia', "country"]))
+n <- length(country_list)
+result <- data.frame(country=character(n),
+                     year=double(n),
+                     lifeExp=double(n),
+                     stringsAsFactors=F)
+
+for (i in seq(1, n)) {
+  c <- filter(gapminder_df, country==country_list[i])
+  result[i, 'country'] <- country_list[i]
+  result[i, 'year'] <- c[which.max(c$lifeExp), 'year']
+  result[i, 'lifeExp'] <- max(c$lifeExp)
+}
+
+result_sorted <- result[order(-result$year, na.last=T), ]
+result_sorted
+```
+
+
+## Question 9
+
+```{r, echo=T}
+table(gapminder_df$continent)
+```
+
+
+## Question 10
+
+```{r, echo=T}
+continents <- array(unique(gapminder_df$continent))
+
+# The following loop might look messy and big but it's function is just to print the results in a nice format:
+for (i in seq(1, length(continents))) {
+  print(paste('In 1952 Ave Life Expentancy and GDP for', continents[i], 'were', mean(gapminder_df_gdp[gapminder_df_gdp$year==1952 & gapminder_df_gdp$continent==continents[i], "lifeExp"], na.rm=T), 'and', mean(gapminder_df_gdp[gapminder_df_gdp$year==1952 & gapminder_df_gdp$continent==continents[i], "GDP"], na.rm=T), 'respectively'))
+  print(paste('In 1952 Median Life Expentancy and GDP for', continents[i], 'were', median(gapminder_df_gdp[gapminder_df_gdp$year==1952 & gapminder_df_gdp$continent==continents[i], "lifeExp"], na.rm=T), 'and', median(gapminder_df_gdp[gapminder_df_gdp$year==1952 & gapminder_df_gdp$continent==continents[i], "GDP"], na.rm=T), 'respectively'))
+  print(paste('In 2007 Ave Life Expentancy and GDP for', continents[i], 'were', mean(gapminder_df_gdp[gapminder_df_gdp$year==2007 & gapminder_df_gdp$continent==continents[i], "lifeExp"], na.rm=T), 'and', mean(gapminder_df_gdp[gapminder_df_gdp$year==2007 & gapminder_df_gdp$continent==continents[i], "GDP"], na.rm=T), 'respectively'))
+  print(paste('In 2007 Median Life Expentancy and GDP for', continents[i], 'were', median(gapminder_df_gdp[gapminder_df_gdp$year==2007 & gapminder_df_gdp$continent==continents[i], "lifeExp"], na.rm=T), 'and', median(gapminder_df_gdp[gapminder_df_gdp$year==2007 & gapminder_df_gdp$continent==continents[i], "GDP"], na.rm=T), 'respectively'))
+}
+```
+
+
