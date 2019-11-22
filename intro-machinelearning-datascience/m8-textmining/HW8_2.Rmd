@@ -1,0 +1,171 @@
+
+```{r}
+require(stringr)
+```
+
+
+
+1) Match any of the following punctuation characters in the ASCII table: !"#$%&'()+,
+
+
+```{r}
+txt<-"!#$%&'()+,"
+t<-gsub("[!#\\$%&'\\(\\)\\+,]","a",txt)
+t
+```
+
+Since they are all converted to a, that means we have matched all characters.
+
+
+
+2) Create one regular expression to match all common misspellings of calendar (see https://en.wikipedia.org/wiki/Wikipedia:Lists_of_common_misspellings/C)
+```{r}
+"cal[ae]nd[ae]r"
+```
+
+
+
+3) Create one regular expression to match any character except line breaks.
+```{r}
+"."
+```
+
+
+4) You need to validate a ZIP code (U.S. postal code), allowing both the five-digit and nine-digit (called ZIP+4) formats. The regex should match 02115 and 02115-5515, but not 2115, 2115-5515, 21155515,021155515, etc..
+```{r}
+
+"\d{5}-\d{4}|\d{5}"
+ 
+```
+
+
+
+5) You need to validate a legit any password for your website. Passwords have the following complexity requirements: Length between 8 and 32 characters, ASCII visible and space characters only, One or more uppercase letters, One or more lowercase letters, One or more special characters (ASCII punctuation)
+```{r}
+check_pass<-function(pass)
+{
+check<-(nchar(pass)>7)&(nchar(pass)<33)&grepl("[a-z]+",pass)&grepl("[A-Z]+",pass)&grepl("[!#\\$%&'\\(\\)\\+,]",pass)
+return(check)
+}
+check_pass("snnjNJNN_ed$")  #correct
+check_pass("snnjNJNN_ed")  #No ASCII 
+check_pass("snnjk_ed$") #no upper
+check_pass("nN_e$") #short
+```
+
+
+
+6) Load the file M08_tweets.csv (it is online at 'http://nikbearbrown.com/YouTube/MachineLearning/M08/M08_tweets.csv')
+  Do the following:
+ - Extract a list of the top 9 users (e.g. @NikBearBrown)
+ - Extract a list of the top 9 hashtags (e.g. #Bear)
+ - Find the top 5 most positve tweets
+ - Find the top 5 most negative tweets
+ - Create a world cloud of 100 related tweetS
+ - Which tweets could be classified as game development?
+ - Write up your report as an .Rmd file.
+
+```{r}
+dt<-read.csv('http://nikbearbrown.com/YouTube/MachineLearning/M08/M08_tweets_small.csv')
+dt[] <- lapply(dt, as.character)  #Changing the format from List to Characters
+str<-dt[,1]     # getting only a vector of string elements.
+head(str)
+
+id<-str_extract_all(str,"@[A-Z0-9a-z_]+")    #extracting the ids, it is a list ,some cells contain multiple elements
+id<-id[lapply(id,length)>0]                    #Eliminating the cells not having thoes @... word
+id[] <- lapply(id, as.character)
+ids<-unlist(id)
+ids<-as.vector(ids)
+ids<-as.data.frame(table(ids))
+head(ids)
+ids<-ids[with(ids, order(-Freq)), ]
+idz<-ids
+idz[1:9,]
+```
+
+Extract a list of the top 9 hashtags (e.g. #Bear)
+
+```{r}
+id<-str_extract_all(str,"#[A-Z0-9a-z_]+")
+id<-id[lapply(id,length)>0]
+ids<-unlist(id)
+ids<-as.data.frame(table(ids))
+ids<-ids[with(ids, order(-Freq)), ]
+hashtag<-ids
+hashtag[1:9,]
+```
+Find the top 5 most positve tweets
+
+```{r}
+id<-str_count(str,"positive|good|happy|great|well|awesome|fantastic|perfect|extraordinary|extra|enjoy|intersting|beaut|excellent")
+id
+positives<-order(-id)
+str[positives[1:9]]
+```
+
+
+Find the top 5 most negative tweets
+```{r}
+id<-str_count(str,"lose|terrible|fear|scare|enemy|death|horrible|bad|poisen|spooky|fuck|disgusting|lack|empty|quiet")
+id
+negetives<-order(-id)
+str[negetives[1:9]]
+```
+
+Create a world cloud of 100 related tweets
+
+As a reasonable strtegy, I try to find the documents that contain certain words mentiond bellow in the code. 
+By a quick review over the documents, words like "game", "fight" and so on appears to be the dominant subjects. 
+```{r}
+x<-"game[s]?|GAME|Game"
+related<-str[grepl(x,str)]
+f<-related[1:100]
+
+
+f.corpus <- Corpus(DataframeSource(data.frame(f)))
+# Eliminating Extra Whitespace
+f.clean<-tm_map(f.corpus, stripWhitespace)
+# stemDocument
+f.clean.stem<-tm_map(f.clean, stemDocument)
+
+writeLines(as.character(f.clean.stem[1]))
+
+f.clean.lc <- tm_map(f.clean, content_transformer(tolower))
+writeLines(as.character(f.clean.lc[1]))
+
+f.clean <- tm_map(f.clean.lc, removeWords, stopwords("english"))
+writeLines(as.character(f.clean.lc[1]))
+
+
+f.tdm <- TermDocumentMatrix(f.clean, control = list(minWordLength = 1))
+f.tdm
+
+
+inspect(f.tdm[11:33,1:33])
+
+
+findFreqTerms(f.tdm, lowfreq=3)
+
+findAssocs(f.tdm, 'brains', 0.40)
+
+# Word Cloud
+m <- as.matrix(f.tdm)
+# calculate the frequency of words
+m
+v <- sort(rowSums(m), decreasing=TRUE)
+v
+myNames <- names(v)
+d <- data.frame(word=myNames, freq=v)
+wordcloud(d$word, d$freq, min.freq=5)
+ 
+```
+
+Which tweets could be classified as game development?
+
+based on the discussion in the course discussion section, It make sense to classify 
+the documents by tag "gamedev" which would refer to game development.
+The following single code would extract all the documents containing the hashtag: #gamedev
+```{r}
+gamedevelop<-str[grepl("#gamedev",str)]
+gamedevelop
+```

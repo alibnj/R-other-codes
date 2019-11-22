@@ -1,0 +1,201 @@
+# Assingment
+
+* Load the file ML.Tweets.csv and ML.Tweets.New.csv (it is online at  'http://nikbearbrown.com/YouTube/MachineLearning/M08/ML.Tweets.csv' and 'http://nikbearbrown.com/YouTube/MachineLearning/M08/ML.Tweets.New.csv' )    
+* Do the following with ML.Tweets.csv:   
+    * Extract and rank a list of the important hashtags (using td-idf or word entropy)   
+    * Cluster the tweets using these hashtags .    
+    * Optional - give the the clusters names based on their dominant hashtags.   
+    * Classify the tweets in ML.Tweets.New.csv using the cluster lables generated from ML.Tweets.csv.  
+    * Use the qdap polarity function to score the polarity of the tweets in ML.Tweets.csv.        
+    * Would creating a custom polarity.frame - A dataframe or environment containing a dataframe of positive/negative words and weights - based on the tags and words in these tweets improve the polarity score? Try it.    
+
+
+Q1) Extract and rank a list of the important hashtags (using td-idf or word entropy) :
+
+```{r}
+library(stringr)
+library(RTextTools)
+library(e1071)
+library(qdap)
+dt<-read.csv('http://nikbearbrown.com/YouTube/MachineLearning/M08/M08_tweets_small.csv')
+dt2<-read.csv('http://nikbearbrown.com/YouTube/MachineLearning/M08/ML.Tweets.New.csv')
+
+dt[] <- lapply(dt, as.character)
+
+str<-str_to_lower(dt[,1])  #lower casing all strings.
+
+str
+
+# id is the hashtag vector
+
+id<-str_extract_all(str,"#[A-Z0-9a-z_]+")    #extracting the ids, it is a list ,some cells contain multiple elements
+id<-id[lapply(id,length)>0]    #Eliminating the cells not having thoes #[.]+ word
+id[] <- lapply(id, as.character)  #enforcing the id vec
+ids<-unlist(id)
+ids
+length(ids)
+hashtags<-unique(ids)    #Unique Hashtags 
+hashtags
+length(hashtags)
+```
+
+Q2) Cluster the tweets using these hashtags .  
+
+```{r}
+###############
+#Claculating tf-idf
+
+
+
+
+#This function returns how many occurance w happens in the the d sentence.  
+search_word<-function(w,d)
+{
+  if(as.numeric(gregexpr(w,d)[[1]][1])==-1)
+  {return(0)}
+  else{
+  return(length(as.numeric(gregexpr(w,d)[[1]])))
+  }
+}
+
+
+# tf function returns 'tf vector' of a word 'w' in the document 'D'. This function requieres function: search_word
+
+tf<-function(w,D)
+{
+  h<-c()
+  f<-c()
+  for (i in (1:length(D)))
+  {
+    h[i]<-search_word(w,D[i])
+  }
+  H<-max(h)
+  if (H==0){return (0)}
+  else
+  {
+      for (i in (1:length(D)))
+      {
+        f[i]<-0.5+((0.5*h[i])/H)
+      }
+      return(f)
+  }
+}
+
+
+# idf function returns 'idf value' of a word 'w' in the document 'D'. This function requieres function: search_word
+idf<-function(w,D)
+{
+  N<-length(D)
+  h<-c()
+  for (i in (1:length(D)))
+  {
+    h[i]<-search_word(w,D[i])
+  }
+  m<-sum(h>0)
+  if(m==0) {return (0)}
+  else{return(log10(N/m))}
+}
+
+
+# tf_idf function returns 'tf_idf vector' of a word 'w' in the document 'D'. This function requieres function: search_word,tf,idf
+
+
+tf_idf<-function(w,D)
+{
+  return(tf(w,D)*idf(w,D))
+}
+
+
+
+
+
+tf_score<-c()
+
+# Creating tf_idf matrix
+for (i in (1:length(hashtags)))
+{
+  
+  tf_score<-rbind(tf_idf(hashtags[i],str),tf_score)
+  print(i)
+}
+tf_score<-t(tf_score)
+     #We transpose the tf_score matrix so each raw corresponds to one document and columns indicate hashtags.
+
+#now clustering:
+#Note that we could use the kmeans in R, however since we want to assign new data to our clustering, we will use package 'flexclust' for clustering.
+
+library('flexclust')
+fit<-kcca(tf_score, k=20, kccaFamily("kmeans"))
+fit
+summary(fit)
+
+
+# Or using the regular kmeans: 
+fitkmean<-kmeans(tf_score, 20)
+fitkmean$centers
+summary(fitkmean)
+fitkmean$size
+```
+
+Q4)Classify the tweets in ML.Tweets.New.csv using the cluster lables generated from ML.Tweets.csv. 
+```{r}
+# We need to geneate the same tag scores matrix and then assign them to their associate clusters.
+
+head(dt2)
+dt2[] <- lapply(dt2, as.character)
+str2<-str_to_lower(dt2[1:3000,1])
+str2
+  
+#Clustering all new string file is very time consuming. Here we extract the first 1000 of them for simplicity.
+
+# Now to construct the 'tf-idf' matrix using the training hashtags and the new string data.
+
+tf_score2<-c()
+
+for (i in (1:length(hashtags)))
+{
+  
+  tf_score2<-rbind(tf_idf(hashtags[i],str2),tf_score2)
+  print(i)
+}
+
+tf_score2<-t(tf_score2)  
+tf_score2
+
+dim(tf_score2)
+
+#predict from 'flexclust' package:
+pred_test <- predict(fit, tf_score2)
+pred_test
+summary(pred_test)
+```
+Since, we applied small number of next strings for both the old and ne data, the clustering result shows that most of the new string vector is assigned to a single center. However, by increasing the number of both the old and new string vector, we end up a better clustering which would clearly diffrentiate the strings in the new vector based on the tags in the old fie. 
+
+
+
+Q5) 
+
+Use the qdap polarity function to score the polarity of the tweets in ML.Tweets.csv.
+
+```{r}
+ps <- polarity(str)
+ps
+ps$group
+ps$all
+```
+
+Q6)
+
+Would creating a custom polarity.frame - A dataframe or environment containing a dataframe of positive/negative words and weights - based on the tags and words in these tweets improve the polarity score? Try it.
+
+```{r}
+POLKEY <- sentiment_frame(c(positive.words, ":)","game","jadi","congratulations","congrats"), c(negative.words, ":(","shit","ruin","help"))
+ps2<-polarity(str, polarity.frame=POLKEY)
+ps$group
+ps2$group
+
+```
+
+So by adding words into the function's predifined dictionary, the polarity of the document changed and became more positive. The word selected to be added are based on the game and its environment. 
+So adding words to dictionary can help modifying the function based on the context and subject, and it works well indeed. 
+
