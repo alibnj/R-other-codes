@@ -1,0 +1,440 @@
+---
+title: "DA5020 - Homework 5: Dates and Times"
+author: "Ali Banijamali"
+date: "10/04/2019"
+output: pdf_document
+---
+
+```{r setup, include=F}
+# knitr::opts_chunk$set(message = FALSE)
+
+# Required Packages:
+library('stringr')
+library('tibble')
+library('tidyverse')
+library('viridis')
+library('lubridate')
+```
+
+Continue working with Farmers Market data from last week.
+
+```{r, echo=T, message=F, warning=F}
+fm <- read.csv('C:/Users/alibs/Google Drive/Courses/DA 5020 - Collect, Store & Retrieve Data/Week 4 - Data wrangling data import and strings/farmers_market.csv', header=T, stringsAsFactors=F)
+```
+
+This week's assignment is not only about dates and times, but also what you learnt from past weeks: data transformation, strings, and more.
+
+You may also need to go through a review on [R control statesments](http://uc-r.github.io/control_statements) since they will come handy in solving some of the problems.
+
+## Questions
+
+1. (10 points) Add a new column `Season1Days` that contains the number of days a market is opened per week (for the dates it is open).
+
+```{r, echo=T, message=F, warning=F}
+# I noticed that based on the format of the table, number of the open days in the weekend can be found just
+# by counting ";", because after every day's schedule, we have ";"
+
+fm$Season1Day <- str_count(fm$Season1Time, ";")
+```
+
+
+2. (10 points) Add a new column `WeekendOpen` indicating whether a market opens during weekends in `Season1`.
+
+```{r, echo=T, message=F, warning=F}
+# grep returns the index number of the row which has the specific pattern, in our case weekend days:
+
+fm[grep('Sat|Sun', fm$Season1Time), 'WeekendOpen'] <- 'Yes'
+fm[is.na(fm$WeekendOpen), 'WeekendOpen'] <- 'No'
+```
+
+
+3. (20 points) Find out which markets close before 6PM, and which open only for fewer than 4 hours a day. For simplicity, consider only `Season1Time`. For markets with different open hours across a week, use the average length of open hours for the days they actually open. 
+
+```{r, echo=T, message=F, warning=F}
+### FIRST PART:
+
+# For the first part, I am extracting all of the working hours, then convert them to 24 hour time format,
+# then I will check the max of that array which is the latest working hour of that market and check if the latest working
+# hour of that market is smaller than 18 which is 6:00 PM. For stores which close before 6 PM (Excluding 6 itself), the element
+# in the column will be TRUE, meaning that the store closes before 6 PM.
+
+# In order to do this, I first write a function which does this operation on a vector, and then use lapply to apply this function
+# on all rows of the farmer market data frame
+
+fun1 <- function(x) {max(as.numeric(as.difftime(unlist(str_extract_all(x, '([0-9])*([0-9:]{4})([ ])*[aApP][mM]')), format="%I:%M %p")))<18}
+# The pattern: ([0-9]*)([0-9:]{4}) : one number (0 or more times) > 4 characters a combination of numbers 0-9 > ([ ]*) : A Space 0 or more times
+# > [aApP][mM] : All variations of AM and PM
+# This function checks if the latest (greatest) working hour for all open days is smaller than 18 (6:00 PM)
+
+# as.difftime takes the operation hours with this format: "%I:%M %p" and converts them to 24h format (e.g. 6 PM > 18)
+# since str_extract_all returns all of the results as one element, we use unlist to make it a vector
+
+fm$close.before.six <- lapply(fm$Season1Time, FUN=fun1)
+
+# ONE MORE STEP: For some Markets we don't have open hours (Season1Time), our algorithm returns FALSE for them, it is better to set them as NA
+fm[fm$Season1Time=="", 'close.before.six'] <- NA
+
+### SECOND PART:
+
+fun2 <- function(x) {
+  A <- unlist(strsplit(x, ';')) # Extract operation days
+  A <- str_extract_all(A, '([0-9])*([0-9])*([:])*([0-9])*([0-9])*([ ])*[aApP][mM]') # Extract operation hours
+  operation_hours_diff <- numeric(length(A)) # Make a vector for saving the working hours per day
+  for(i in 1:length(A)) {
+    operation_hours <- strptime(unlist(A[i]), format=c("%I:%M %p")) # Get the operation hours
+    operation_hours_diff[i] <- as.numeric(difftime(operation_hours[2], operation_hours[1])) # Find the time difference between operation hours
+  }
+  ave_weekly <- mean(operation_hours_diff) # Get the average working hours
+  if(is.na(ave_weekly)){return('No Operation Hour')} # If we don't have operation hour data for that market
+  if(ave_weekly<4){return('Yes')} # If average working hour is less than 4 hours
+  else{return('No')} # Else
+}
+
+fm$is.less.than.4h <- lapply(fm$Season1Time, FUN=fun2)
+```
+
+
+4. (40 Points) The seasons are not standardized and would make analysis difficult. Create four new columns for four seasons (Spring, Summer, Fall, Winter), indicating whether a market is available in that season. Also, create two additional columns `HalfYear` and `YearRound` to identify those who open across seasons. Define "half year" and "year round" on your own terms, but explain them before you write the code (or as comments in your code). (Hint: you may want to create even more auxiliary columns, `Season1BeginDate` and `Season1EndDate` for example.)
+
+```{r, echo=T, message=F, warning=F}
+# Data Cleaning:
+
+# 1. Replacing all alphabetical month names with numerical equivalents:
+fm$Season1Date <- gsub('[jJ][aA][nN]([.])*([uU][aA][rR][yY])*', '01', fm$Season1Date)
+fm$Season1Date <- gsub('[fF][eE][bB]([.])*([rR][uU][aA][rR][yY])*', '02', fm$Season1Date)
+fm$Season1Date <- gsub('[mM][aA][rR]([.])*([cC][hH])*', '03', fm$Season1Date)
+fm$Season1Date <- gsub('[aA][pP][rR]([.])*([iI][lL])*', '04', fm$Season1Date)
+fm$Season1Date <- gsub('[mM][aA][yY]([.])*', '05', fm$Season1Date)
+fm$Season1Date <- gsub('[jJ][uU][nN]([.])*([eE])*', '06', fm$Season1Date)
+fm$Season1Date <- gsub('[jJ][uU][lL]([.])*([yY])*', '07', fm$Season1Date)
+fm$Season1Date <- gsub('[aA][uU][gG]([.])*([uU][sS][tT])*', '08', fm$Season1Date)
+fm$Season1Date <- gsub('[sS][eE][pP]([.])*([tT][eE][mM][bB][eE][rR])*', '09', fm$Season1Date)
+fm$Season1Date <- gsub('[oO][cC][tT]([.])*([oO][bB][eE][rR])*', '10', fm$Season1Date)
+fm$Season1Date <- gsub('[nN][oO][vV]([.])*([eE][mM][bB][eE][rR])*', '11', fm$Season1Date)
+fm$Season1Date <- gsub('[dD][eE][cC]([.])*([eE][mM][bB][eE][rR])*', '12', fm$Season1Date)
+
+# 2. Splitting dates to start and end for each season:
+fm <- cbind(fm, s1start=character(nrow(fm)),
+            s1end=character(nrow(fm)),
+            s2start=character(nrow(fm)),
+            s2end=character(nrow(fm)),
+            s3start=character(nrow(fm)),
+            s3end=character(nrow(fm)),
+            s4start=character(nrow(fm)),
+            s4end=character(nrow(fm)), stringsAsFactors=F)
+
+for(i in 1:nrow(fm)){
+  s1 <- unlist(strsplit(fm$Season1Date[i], 'to'))
+  fm$s1start[i] <- s1[1]
+  fm$s1end[i] <- s1[2]
+  
+  s2 <- unlist(strsplit(fm$Season2Date[i], 'to'))
+  fm$s2start[i] <- s2[1]
+  fm$s2end[i] <- s2[2]
+  
+  s3 <- unlist(strsplit(fm$Season3Date[i], 'to'))
+  fm$s3start <- s3[1]
+  fm$s3end <- s3[2]
+  
+  s4 <- unlist(strsplit(fm$Season4Date[i], 'to'))
+  fm$s4start <- s4[1]
+  fm$s4end <- s4[2]
+}
+
+# 3. At this point we should not have any alphabetical character in the start and end date,
+# If there is one, it should be removed because it's not relevant to date:
+fm$s1start <- gsub('[:alpha:]+', '', fm$s1start)
+fm$s2start <- gsub('[:alpha:]+', '', fm$s2start)
+fm$s3start <- gsub('[:alpha:]+', '', fm$s3start)
+fm$s4start <- gsub('[:alpha:]+', '', fm$s4start)
+fm$s1end <- gsub('[:alpha:]+', '', fm$s1end)
+fm$s2end <- gsub('[:alpha:]+', '', fm$s2end)
+fm$s3end <- gsub('[:alpha:]+', '', fm$s3end)
+fm$s4end <- gsub('[:alpha:]+', '', fm$s4end)
+
+# 4. I am now first replacing ',' with '/' and then replacing spaces with /:
+fm$s1start <- gsub('[ ]*[,]([ ])*', '/', fm$s1start)
+fm$s2start <- gsub('[ ]*[,]([ ])*', '/', fm$s2start)
+fm$s3start <- gsub('[ ]*[,]([ ])*', '/', fm$s3start)
+fm$s4start <- gsub('[ ]*[,]([ ])*', '/', fm$s4start)
+fm$s1end <- gsub('[ ]*[,]([ ])*', '/', fm$s1end)
+fm$s2end <- gsub('[ ]*[,]([ ])*', '/', fm$s2end)
+fm$s3end <- gsub('[ ]*[,]([ ])*', '/', fm$s3end)
+fm$s4end <- gsub('[ ]*[,]([ ])*', '/', fm$s4end)
+
+# 5. For some of the start/end dates we only have the month, I am replacing them with the first
+# day of month: 07 >> 07/01
+fm[is.na(fm)] <- 0 # Because NA is not recognized as logical argument
+
+for (i in 1:nrow(fm)){
+  if (nchar(fm$s1start[i])==2 | nchar(fm$s1start[i])==3){
+    fm$s1start[i] <- paste(as.character(fm$s1start[i]), '/01')
+  }
+  if (nchar(fm$s2start[i])==2 | nchar(fm$s2start[i])==3){
+    fm$s2start[i] <- paste(as.character(fm$s2start[i]), '/01')
+  }
+  if (nchar(fm$s3start[i])==2 | nchar(fm$s3start[i])==3){
+    fm$s3start[i] <- paste(as.character(fm$s3start[i]), '/01')
+  }
+  if (nchar(fm$s4start[i])==2 | nchar(fm$s4start[i])==3){
+    fm$s4start[i] <- paste(as.character(fm$s4start[i]), '/01')
+  }
+  if (nchar(fm$s1end[i])==2 | nchar(fm$s1end[i])==3){
+    fm$s1end[i] <- paste(as.character(fm$s1end[i]), '/01')
+  }
+  if (nchar(fm$s2end[i])==2 | nchar(fm$s2end[i])==3){
+    fm$s2end[i] <- paste(as.character(fm$s2end[i]), '/01')
+  }
+  if (nchar(fm$s3end[i])==2 | nchar(fm$s3end[i])==3){
+    fm$s3end[i] <- paste(as.character(fm$s3end[i]), '/01')
+  }
+  if (nchar(fm$s4end[i])==2 | nchar(fm$s4end[i])==3){
+    fm$s4end[i] <- paste(as.character(fm$s4end[i]), '/01')
+  }
+}
+
+# 6. Converting patterns like 06 10/2012 to 06/10/2012:
+# Partial gsub > keeping the first \\1 and secomd \\2 group (), and putting / instead of space:
+fm$s1start <- gsub('([0-9])[ ]+([0-9])', '\\1/\\2', fm$s1start)
+fm$s2start <- gsub('([0-9])[ ]+([0-9])', '\\1/\\2', fm$s2start)
+fm$s3start <- gsub('([0-9])[ ]+([0-9])', '\\1/\\2', fm$s3start)
+fm$s4start <- gsub('([0-9])[ ]+([0-9])', '\\1/\\2', fm$s4start)
+fm$s1end <- gsub('([0-9])[ ]+([0-9])', '\\1/\\2', fm$s1end)
+fm$s2end <- gsub('([0-9])[ ]+([0-9])', '\\1/\\2', fm$s2end)
+fm$s3end <- gsub('([0-9])[ ]+([0-9])', '\\1/\\2', fm$s3end)
+fm$s4end <- gsub('([0-9])[ ]+([0-9])', '\\1/\\2', fm$s4end)
+
+# 7. Removing spaces and tabs:
+fm$s1start <- gsub('[\t ]', '', fm$s1start)
+fm$s2start <- gsub('[\t ]', '', fm$s2start)
+fm$s3start <- gsub('[\t ]', '', fm$s3start)
+fm$s4start <- gsub('[\t ]', '', fm$s4start)
+fm$s1end <- gsub('[\t ]', '', fm$s1end)
+fm$s2end <- gsub('[\t ]', '', fm$s2end)
+fm$s3end <- gsub('[\t ]', '', fm$s3end)
+fm$s4end <- gsub('[\t ]', '', fm$s4end)
+
+# 8. At this point we have 3 types of elements in the cells:
+# 1. mm/dd/yyyy
+# 2. mm/dd
+# 3. 0 (For markets w/o info)
+# We are unifying all of the date columns to this format mm/dd/yyyy:
+
+fun3 <- function(x){
+  if (nchar(x)==10){
+    x <- gsub('/2([0-9]){3}', '/2019', x) # replacing the years w 2019
+  }
+  else if (nchar(x)==5){
+    x <- as.character(paste(x, '/2019', sep='')) # for those w/o year, setting the year to 2019
+  }
+  else if (x=='0'){
+    x <- '0'
+  }
+}
+
+# for a reason not clear to me, some of the cells need to be unlisted, so I am applying this function:
+fun4 <- function(x){
+  a <- unlist(x)
+  x <- as.character(a[1])
+}
+
+fm$s1start <- lapply(fm$s1start, fun3)
+fm$s2start <- lapply(fm$s2start, fun3)
+fm$s3start <- lapply(fm$s3start, fun3)
+fm$s4start <- lapply(fm$s4start, fun3)
+fm$s1end <- lapply(fm$s1end, fun3)
+fm$s2end <- lapply(fm$s2end, fun3)
+fm$s3end <- lapply(fm$s3end, fun3)
+fm$s4end <- lapply(fm$s4end, fun3)
+
+fm$s1start <- lapply(fm$s1start, fun4)
+fm$s2start <- lapply(fm$s2start, fun4)
+fm$s3start <- lapply(fm$s3start, fun4)
+fm$s4start <- lapply(fm$s4start, fun4)
+fm$s1end <- lapply(fm$s1end, fun4)
+fm$s2end <- lapply(fm$s2end, fun4)
+fm$s3end <- lapply(fm$s3end, fun4)
+fm$s4end <- lapply(fm$s4end, fun4)
+
+#---------------------------------------------------
+# AT THIS POINT DATA IS CLEANED AND READY TO ANALYZE ^^^^
+#---------------------------------------------------
+
+# Analyzing the Data:
+
+# 1. Fixing the seasons:
+# The intervals for the seasons are defined as:
+# Note that I didn't use these interval objects in the end, but I'm keeping them here to show
+# how I defined the start and end of seasons
+spring <- interval(ymd('2019-04-01'), ymd('2019-07-01'))
+summer <- interval(ymd('2019-07-02'), ymd('2019-10-02')) 
+fall <- interval(ymd('2019-10-03'), ymd('2019-12-31'))
+winter <- interval(ymd('2019-01-01'), ymd('2019-04-01'))
+
+# Adding columns for seasons and YearRound/HalfYear:
+fm <- cbind(fm, Spring=character(nrow(fm)),
+            Summer=character(nrow(fm)),
+            Fall=character(nrow(fm)),
+            Winter=character(nrow(fm)),
+            HalfYear=character(nrow(fm)),
+            YearRound=character(nrow(fm)), stringsAsFactors=F)
+# removing corrupt data from the loop:
+rem <- c(77,166,696,1336,1817,2118,3171,3651,3850,3927,5321,5642,7313,7444,7678,8330,8516)
+# Looking for overlaps with the actual season:
+# If a market is open during a season, it has Yes for that season:
+# 1.1. Spring:
+for (i in seq(1, nrow(fm))[-rem]){
+  if (nchar(fm$s1start[i])==10 & nchar(fm$s1end[i])==10){ # only if we have a alid start/end date:
+    if ((mdy(fm$s1start[i]) <= ymd('2019-07-01')) & (mdy(fm$s1end[i]) >= ymd('2019-04-01'))){
+      fm$Spring[i] <- 'Yes'}
+    next
+  }
+  
+  else if (nchar(fm$s2start[i])==10 & nchar(fm$s2end[i])==10){
+    if (((mdy(fm$s2start[i]) <= ymd('2019-07-01')) & (mdy(fm$s2end[i]) >= ymd('2019-04-01')))){
+      fm$Spring[i] <- 'Yes'}
+    next    
+  }
+  
+  else if (nchar(fm$s3start[i])==10 & nchar(fm$s3end[i])==10){
+    if (((mdy(fm$s3start[i]) <= ymd('2019-07-01')) & (mdy(fm$s3end[i]) >= ymd('2019-04-01')))){
+      fm$spring[i] <- 'Yes'}
+    next    
+  }
+  
+  else if (nchar(fm$s4start[i])==10 & nchar(fm$s4end[i])==10){
+    if (((mdy(fm$s4start[i]) <= ymd('2019-07-01')) & (mdy(fm$s4end[i]) >= ymd('2019-04-01')))){
+      fm$Spring[i] <- 'Yes'}
+  }  
+}    
+
+# 1.2. Summer:    
+for (i in seq(1, nrow(fm))[-rem]){
+  if (nchar(fm$s1start[i])==10 & nchar(fm$s1end[i])==10){
+    if (((mdy(fm$s1start[i]) <= ymd('2019-10-02')) & (mdy(fm$s1end[i]) >= ymd('2019-07-02')))){
+      fm$Summer[i] <- 'Yes'}
+    next
+  }
+  
+  else if (nchar(fm$s2start[i])==10 & nchar(fm$s2end[i])==10){
+    if (((mdy(fm$s2start[i]) <= ymd('2019-10-02')) & (mdy(fm$s2end[i]) >= ymd('2019-07-02')))){
+      fm$Summer[i] <- 'Yes'}
+    next    
+  }
+  
+  else if (nchar(fm$s3start[i])==10 & nchar(fm$s3end[i])==10){
+    if (((mdy(fm$s3start[i]) <= ymd('2019-10-02')) & (mdy(fm$s3end[i]) >= ymd('2019-07-02')))){
+      fm$Summer[i] <- 'Yes'}
+    next    
+  }
+  
+  else if (nchar(fm$s4start[i])==10 & nchar(fm$s4end[i])==10){
+    if (((mdy(fm$s4start[i]) <= ymd('2019-10-02')) & (mdy(fm$s4end[i]) >= ymd('2019-07-02')))){
+      fm$Summer[i] <- 'Yes'}
+  }  
+}
+
+# 1.3. Fall:
+for (i in seq(1, nrow(fm))[-rem]){
+  if (nchar(fm$s1start[i])==10 & nchar(fm$s1end[i])==10){
+    if (((mdy(fm$s1start[i]) <= ymd('2019-12-31')) & (mdy(fm$s1end[i]) >= ymd('2019-10-03')))){
+      fm$Fall[i] <- 'Yes'}
+    next
+  }
+  
+  else if (nchar(fm$s2start[i])==10 & nchar(fm$s2end[i])==10){
+    if (((mdy(fm$s2start[i]) <= ymd('2019-12-31')) & (mdy(fm$s2end[i]) >= ymd('2019-10-03')))){
+      fm$Fall[i] <- 'Yes'}
+    next    
+  }
+  
+  else if (nchar(fm$s3start[i])==10 & nchar(fm$s3end[i])==10){
+    if (((mdy(fm$s3start[i]) <= ymd('2019-12-31')) & (mdy(fm$s3end[i]) >= ymd('2019-10-03')))){
+      fm$Fall[i] <- 'Yes'}
+    next    
+  }
+  
+  else if (nchar(fm$s4start[i])==10 & nchar(fm$s4end[i])==10){
+    if (((mdy(fm$s4start[i]) <= ymd('2019-12-31')) & (mdy(fm$s4end[i]) >= ymd('2019-10-03')))){
+      fm$Fall[i] <- 'Yes'}
+  }  
+}
+
+# 1.4. Winter:
+for (i in seq(1, nrow(fm))[-rem]){
+  if (nchar(fm$s1start[i])==10 & nchar(fm$s1end[i])==10){
+    if (((mdy(fm$s1start[i]) <= ymd('2019-04-01')) & (mdy(fm$s1end[i]) >= ymd('2019-01-01')))){
+      fm$Winter[i] <- 'Yes'}
+    next
+  }
+  
+  else if (nchar(fm$s2start[i])==10 & nchar(fm$s2end[i])==10){
+    if (((mdy(fm$s2start[i]) <= ymd('2019-04-01')) & (mdy(fm$s2end[i]) >= ymd('2019-01-01')))){
+      fm$Winter[i] <- 'Yes'}
+    next    
+  }
+  
+  else if (nchar(fm$s3start[i])==10 & nchar(fm$s3end[i])==10){
+    if (((mdy(fm$s3start[i]) <= ymd('2019-04-01')) & (mdy(fm$s3end[i]) >= ymd('2019-01-01')))){
+      fm$Winter[i] <- 'Yes'}
+    next    
+  }
+  
+  else if (nchar(fm$s4start[i])==10 & nchar(fm$s4end[i])==10){
+    if (((mdy(fm$s4start[i]) <= ymd('2019-04-01')) & (mdy(fm$s4end[i]) >= ymd('2019-01-01')))){
+      fm$Winter[i] <- 'Yes'}
+  }  
+}
+
+
+
+# 2. Figuring out Half Year or Year Round:
+# If a market has open dates in all of the seasons, we mark it as yearly
+# If it is open in at least two seasons, it is Half Year
+for (i in seq(1, nrow(fm))[-rem]){
+  if (fm$Spring[i]=='Yes' & fm$Summer[i]=='Yes' & fm$Fall[i]=='Yes' & fm$Winter[i]=='Yes'){
+    fm$YearRound[i] <- 'Yes'
+  }
+  else if (fm$Spring[i]=='Yes' & fm$Summer[i]=='Yes'|
+           fm$Spring[i]=='Yes' & fm$Fall[i]=='Yes'|
+           fm$Spring[i]=='Yes' & fm$Winter[i]=='Yes'|
+           fm$Summer[i]=='Yes' & fm$Fall[i]=='Yes'|
+           fm$Fall[i]=='Yes' & fm$Winter[i]=='Yes'){
+    fm$HalfYear[i] <- 'Yes'
+  }
+}
+```
+
+
+5. (20 points) _Open question_: explore the new variables you just created. Aggregate them at different geographic levels, or some other categorical variable. What can you discover?
+
+```{r, echo=T, message=F, warning=F}
+# For this question I have looked at the status of markets in different seasons
+# and wether they are half or full year for different states
+# The columns show the number of markets in those states which are open during
+# different seasons or yearly / half yearly
+
+states <- unique(fm$State)
+geo.data <- data.frame(State=character(length(states)),
+                       SpringMarkets=numeric(length(states)),
+                       SummerMarkets=numeric(length(states)),
+                       FallMarkets=numeric(length(states)),
+                       WinterMarkets=numeric(length(states)),
+                       HalfYearMarkets=numeric(length(states)),
+                       YearRoundMarkets=numeric(length(states)), stringsAsFactors=F)
+for (i in 1:length(states)) {
+  geo.data[i, 'State'] <- states[i]
+  geo.data[i, 'SpringMarkets'] <- nrow(fm[fm$State==states[i] & fm$Spring=='Yes', ])
+  geo.data[i, 'SummerMarkets'] <- nrow(fm[fm$State==states[i] & fm$Summer=='Yes', ])
+  geo.data[i, 'FallMarkets'] <- nrow(fm[fm$State==states[i] & fm$Fall=='Yes', ])
+  geo.data[i, 'WinterMarkets'] <- nrow(fm[fm$State==states[i] & fm$Winter=='Yes', ])
+  geo.data[i, 'HalfYearMarkets'] <- nrow(fm[fm$State==states[i] & fm$HalfYear=='Yes', ])
+  geo.data[i, 'YearRoundMarkets'] <- nrow(fm[fm$State==states[i] & fm$YearRound=='Yes', ])
+}
+
+# A quick look at the data reveals we don't have or have very few winter market in cold states
+# like vermont
+# For example look at MA: We have 193 Spring, 219 Summer,	170 Fall and only	11 Winter markets
+```
+
+
