@@ -1,0 +1,124 @@
+---
+title: "Homework 1 Solution"
+author: "Nick Beauchamp, Ryszard Czerminski and Hao-En Kao"
+date: "01/10/2015, updated 02/01/2017, lastest 11/6/2019"
+output: pdf_document
+header-includes:
+  - \usepackage{gensymb}
+  - \usepackage{hanging}
+  - \usepackage{hyperref}
+  - \usepackage{fancyhdr}
+  - \usepackage{lipsum}
+  - \usepackage{color}
+  - \usepackage{soul}
+  - \usepackage{dcolumn}
+  - \usepackage{xcolor}
+  - \usepackage{tcolorbox}
+  - \usepackage[shortlabels]{enumitem}
+---
+
+This is an example of a homework assignment solution.  It is written in RMarkdown and \LaTeX, and was knit to PDF.  It is most useful to look at the .Rmd file that produced the PDF.  You may use that .Rmd file as a template for you own homework assignments.(This means it's ok not to use, don't worry)
+
+Note that these solutions are incorrect!  Do not just copy these answers as solutions for problem set #1.  
+
+\begin{tcolorbox}[width=\textwidth,colback={green}]
+1. Create two vectors named u and v both of length 3 and filled with random integers in 1-9 range.
+\end{tcolorbox}
+
+```{r}
+u <- sample(9,3)
+v <- sample(9,3)
+u
+v
+```
+
+
+2.a. Create a 2 by 3 matrix (i.e. two rows and three columns) with random permutation of integers
+from 1:6 as its elements, and call it m
+
+```{r}
+m <- matrix(data=sample(6), nrow=2, ncol=3)
+m
+```
+
+2.b. What is m times u?
+
+```{r}
+mu <- m %*% u
+```
+
+
+3. 
+
+```{r fig.width=4, fig.height=3}
+plot(cars)
+```
+
+
+4. Using latex equation notation in your .Rmd file, write out the quadratic formula, so that in your html file it looks pretty and like the version we all learned in high school. (Eg, see the box in the top right of
+\href{http://en.wikipedia.org/wiki/Quadratic_equation}
+{Quadratic equation wikipedia page})
+
+$$\frac{\sqrt{10 \pm x^7}}{2 - \alpha}$$
+\hrulefill
+
+\large
+\textbf{More examples:}
+\normalsize
+
+```{r}
+alpha <- 3
+beta <- 5
+a <- 3
+b <- 4
+c <- 5
+mu <- 100
+sigma <- 5
+n <- 5
+x <- rnorm(n, mu, sigma)
+x = round(x, 3)
+```
+
+\begin{enumerate}
+\item inline  R code `r gamma=7` and \LaTeX:
+      $\alpha = `r alpha`$ and $\beta = `r beta`$
+      and $\gamma = `r gamma`$
+\item use of R snippets in {\LaTeX} equations:
+   \begin{itemize}
+   \item Pythagoras Theorem: $a^2 + b^2 = c^2$, and an example: $`r a`^2 + `r b`^2 = `r c`^2$
+   \item Sample mean: $\bar x = \frac{1}{n} \sum_{i=1}^n x_i
+   = \frac{1}{`r n`} \sum_{i=1}^{`r n`} x_i \simeq \frac{1}{`r n`} (`r x[1]` + \dots + `r x[n]`)
+   = `r round(mean(x),2)`$
+   \end{itemize}
+\item {\Large inline equation: $e^{i \phi} = cos \phi + i sin \phi$}
+\item {\LARGE verbatim: \verb|$E = m c ^2$| : $E = m c ^2$}
+\end{enumerate}
+
+and now itemize:
+
+\begin{itemize}
+\item highlight: \hl{\emph{highlighted text}}
+\item color text: {\color{red}{this text is green}}
+\end{itemize}
+
+# Dos and Dont's
+
+\textbf{\color{red}{Don't use regular R-code blocks for your main commentary:}}
+```r
+# Suspendisse eu nunc. Aliquam dignissim urna sit amet mauris. Cras commodo, urna ut porttitor
+# venenatis, arcu metus sodales risus, vitae gravida sapien ligula in est. Donec
+# vulputate sollicitudin wisi. Donec vehicula, est id interdum ornare, nibh tellus
+# consectetuer justo, a ultrices felis erat at lectus. 
+```
+
+\definecolor{applegreen}{rgb}{0.55, 0.71, 0.0}
+\definecolor{darkpastelgreen}{rgb}{0.01, 0.75, 0.24}
+\textbf{\color{darkpastelgreen}{Do use regular text for that:}}
+
+Suspendisse eu nunc. Aliquam dignissim urna sit amet mauris. Cras commodo, urna ut porttitor
+venenatis, arcu metus sodales risus, vitae gravida sapien ligula in est. Donec
+vulputate sollicitudin wisi. Donec vehicula, est id interdum ornare, nibh tellus
+consectetuer justo, a ultrices felis erat at lectus. 
+
+
+

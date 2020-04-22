@@ -1,0 +1,320 @@
+---
+title: "INSH5301 Intro Computational Statistics"
+author: "Ali Banijamali"
+date: "03/23/2020"
+output: pdf_document
+header-includes:
+   - \usepackage{dcolumn}    
+   - \usepackage{float}
+# classoption: landscape >> This is for Landscape output
+---
+
+```{r, echo=F, message=F, warning=F}
+# Added the following lines to the header of the Markdown to make Stargazer work:
+
+# header-includes:
+# - \usepackage{dcolumn}    
+
+# - \usepackage{float} is for Holding the position of the tables.
+```
+
+
+## PROBLEM 1: College Distance (Revisited)  
+## For this problem we are going to explore the effect of distance from college on educational attainment. The dependent variable (Y) is years of completed education ed. Run any regression using the lm command and display regression tables using the stargazer command.  
+  
+```{r, echo=T, message=F, warning=F}
+# Required Libraries:
+# install.packages('stargazer')
+# install.packages('car')
+library('stargazer')
+library('ggplot2')
+library('car')
+
+# Reading the data:
+col.dist <- read.csv(
+  paste('C:/Users/alibs/Google Drive/Courses/INSH5301 Intro Computational Statistics/',
+  'Module 9 - Multiple Regression 2/collegeDistance/CollegeDistance.csv', sep=''),
+  stringsAsFactors = F)
+# In my previous HW you mentioned you are ok with paths being out of border,
+# but I left them like this any way, it is tidier this way :)
+```
+  
+## 1.1. Test the hypothesis that college distance is related with educational attainment using a bivariate regression model.  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F, results='asis'}
+ed.vs.colDist <- lm(ed ~ dist, data=col.dist)
+
+stargazer(ed.vs.colDist, align=TRUE, no.space=TRUE, header=FALSE,
+          title="Educational Attainment (Years) vs. College Distance",
+          dep.var.labels=c("Educational Attainment (Years)"), 
+          covariate.labels=c("College Distance"), 
+          omit.stat=c("LL","ser","f"),
+          table.placement = "H" # TO hold the table at it's place (Not floating)
+          # Floting tables get out of order in the printed output
+         )
+```
+  
+As can be seen from the summary of the results, the slope of regression is -0.073. There is a negative relationship, meaning that as the college distance increases, students attain less years of education. the $R^2$/$Adjusted R^2$ are 0.007 howerver, meaning that this parameter (College Distance) only explains %7 of the variation in educational attainments. We can improve the model by adding more useful parameters.  
+  
+  
+## 1.2. A regression will suffer from omitted variable bias when two conditions hold. What are these two conditions? Do these conditions seem to hold in this case?  
+  
+ANS.  
+First let's see what is Omitted Variable Bias (OVB):  
+In statistics, omitted-variable bias (OVB) occurs when a statistical model leaves out one or more relevant variables. The bias results in the model attributing the effect of the missing variables to the estimated effects of the included variables.  
+  
+For this condition to exist in a linear regression, 2 conditions must hold true:  
+- The omitted variable must be a determinant of the dependent variable (i.e., its true regression coefficient must not be zero); and  
+- The omitted variable must be correlated with an independent variable specified in the regression (i.e., cov(z,x) must not equal zero).  
+Both of these conditions hold true here as we found out in the previous HW, however we can check these conditions again:  
+
+```{r, echo=T, message=F, warning=F}
+# 1. Checking the correlation between parameters:
+cor(col.dist)
+```
+  
+By looking at the dist column, we can see it has non-zero correlations with these variables:  
+dadcoll (-0.11): 1 = Father is a College Graduate/ 0 = Father is not a College Graduate,  
+urban (-0.29): 1 = School in Urban Area / = School not in Urban Area,  
+cue80 (0.25): County Unemployment rate in 1980,  
+tuition (-0.19): Avg. State 4yr College Tuition in $1000's.  
+
+So, one of the conditions hold true for these variabes so far. Now let's look at the regression coefficient of these parameters:
+  
+```{r, echo=T, message=F, warning=F}
+# 2. Checking the regression parameter:
+# 2.a. dadcol:
+ed.vs.dadcol <- lm(ed ~ dadcoll, data=col.dist)
+ed.vs.dadcol$coefficients
+
+# 2.b. urban:
+ed.vs.urban <- lm(ed ~ urban, data=col.dist)
+ed.vs.urban$coefficients
+
+# 2.c. cue80:
+ed.vs.cue80 <- lm(ed ~ cue80, data=col.dist)
+ed.vs.cue80$coefficients
+
+# 2.d. tuition:
+ed.vs.tuition <- lm(ed ~ tuition, data=col.dist)
+ed.vs.tuition$coefficients
+```
+  
+As can be seen above, the slope for 2 of these variables (urban & cue80) is zero. However, for dadcoll and tuition, the slope is not zero and therefore at least these two variables have the criteria described above and must be included in the model.  
+  
+  
+## 1.3. Consider the various control variables in the dataset. Which do you think should be included in the regression? (Explain)  
+  
+ANS.  
+We can run a linear regression with all of these parameters in the model and then decide to include which one of the parameters. However, as discussed in the lecture notes, we should think carefully how independent parameters can affect the dependent parameters and whether they are meaningful or not. Let's first include all of the parameters in the model:     
+```{r, echo=T, message=F, warning=F, results='asis'}
+ed.vs.all <- lm(ed ~ female + black + hispanic + bytest + dadcoll + momcoll + 
+                  ownhome + urban + cue80 + stwmfg80 + dist + tuition + incomehi,
+                data=col.dist)
+
+stargazer(ed.vs.all, align=TRUE, no.space=TRUE, header=FALSE,
+          title="Educational Attainment (Years) vs. All Parameters",
+          dep.var.labels=c("Educational Attainment (Years)"), 
+          omit.stat=c("LL","ser","f"),
+          table.placement = "H" # Hold the position of the table
+         )
+```
+I think the most important parameter is incomehi which is the family income. This parameter includes some other parameters, i.e. if a family have higher income, there is a higher chance for them to own a home (ownhome), or if they have a higher income, they can afford higher tuition fees (tuition). The effect of dad's education looks stronger than mom's education. Also, the ethnicity information like hispanic and black variables have high p-value and small errors. The last variable is the gender information which seems to play an important role too.  
+  
+  
+## 1.4. Estimate a set of multivariate regression models. Add one additional variable at a time – that is, each new regression should have at most one additional variable than the previous one –. Display all regressions (including (1.1)) in a single table using stargazer. At this stage only consider OVB when deciding to add more variables. Compare the results of the multivariate regressions with the bivariate model.  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F, results='asis'}
+# I am going based on correlations between all of the predictors and education:
+cor(col.dist[,-13], col.dist$ed) # column 13 is ed which is removed
+
+# Now having dist in the model we start adding the highest cor predictors:
+# 1. bytest:
+col.m1 <- lm(ed ~ dist + bytest, data=col.dist)
+stargazer(col.m1, align=TRUE, no.space=TRUE, header=FALSE,
+          title="Educational Attainment Model",
+          dep.var.labels=c("Educational Attainment (Years)"), 
+          omit.stat=c("LL","ser","f"),
+          table.placement = "H" # Hold the position of the table
+         )
+```
+Summary: All of the variables are significant, $adjusted\ R^2=0.229$. Let's add more parameters:    
+  
+```{r, echo=T, message=F, warning=F, results='asis'}
+# 2. dadcoll:
+col.m2 <- lm(ed ~ dist + bytest + dadcoll, data=col.dist)
+stargazer(col.m2, align=TRUE, no.space=TRUE, header=FALSE,
+          title="Educational Attainment Model",
+          dep.var.labels=c("Educational Attainment (Years)"), 
+          omit.stat=c("LL","ser","f"),
+          table.placement = "H" # Hold the position of the table
+         )
+```
+Summary: All of the variables are significant, $adjusted\ R^2=0.259$. We'll keep these, let's add more parameters:  
+  
+```{r, echo=T, message=F, warning=F, results='asis'}
+# 3. dadcoll:
+col.m3 <- lm(ed ~ dist + bytest + dadcoll + momcoll, data=col.dist)
+stargazer(col.m3, align=TRUE, no.space=TRUE, header=FALSE,
+          title="Educational Attainment Model",
+          dep.var.labels=c("Educational Attainment (Years)"), 
+          omit.stat=c("LL","ser","f"),
+          table.placement = "H" # Hold the position of the table
+         )
+```
+Summary: All of the variables are significant, $adjusted\ R^2=0.264$. We'll keep these, let's add more parameters:  
+  
+```{r, echo=T, message=F, warning=F, results='asis'}
+# 4. incomehi:
+col.m4 <- lm(ed ~ dist + bytest + dadcoll + momcoll + incomehi, data=col.dist)
+stargazer(col.m4, align=TRUE, no.space=TRUE, header=FALSE,
+          title="Educational Attainment Model",
+          dep.var.labels=c("Educational Attainment (Years)"), 
+          omit.stat=c("LL","ser","f"),
+          table.placement = "H" # Hold the position of the table
+         )
+```
+Summary: All of the variables are significant, $adjusted\ R^2=0.269$. dist is starting to get less significant but the adjusted R-squared is still increasing. We'll keep these, let's add more parameters:  
+  
+```{r, echo=T, message=F, warning=F, results='asis'}
+# 5. black:
+col.m5 <- lm(ed ~ dist + bytest + dadcoll + momcoll + incomehi + black, data=col.dist)
+stargazer(col.m5, align=TRUE, no.space=TRUE, header=FALSE,
+          title="Educational Attainment Model",
+          dep.var.labels=c("Educational Attainment (Years)"), 
+          omit.stat=c("LL","ser","f"),
+          table.placement = "H" # Hold the position of the table
+         )
+```
+Summary: All of the variables are significant, $adjusted\ R^2=0.272$. At this point dist is no longer significant. We might want to remove it from the model. In the next step, let's add cue80:  
+  
+```{r, echo=T, message=F, warning=F, results='asis'}
+# 6. cue80:
+col.m6 <- lm(ed ~ dist + bytest + dadcoll + momcoll + incomehi + black + cue80, data=col.dist)
+stargazer(col.m6, align=TRUE, no.space=TRUE, header=FALSE,
+          title="Educational Attainment Model",
+          dep.var.labels=c("Educational Attainment (Years)"), 
+          omit.stat=c("LL","ser","f"),
+          table.placement = "H" # Hold the position of the table
+         )
+```
+Summary: All of the variables are significant, $adjusted\ R^2=0.273$. The in improvement in adjusted R-squared is very minor. We might want to stop at this poin. dist variable is significant again but both dist and cue80 are not very impressive variables.    
+  
+## 1.5. Check if the estimated model sufferes from multicollinearity.  
+  
+ANS.  
+(NOTE!! I first did problem 2, therefore I explained multi-collinearity in more detail there.)  
+I am checking multi-collinearity w/ vif function from car package. The smallest possible value of VIF is 1 (absence of multicollinearity). As a rule of thumb, a VIF value that exceeds 5 or 10 indicates a problematic amount of collinearity:  
+  
+```{r, echo=T, message=F, warning=F}
+vif(lm(ed ~ dist + bytest + dadcoll + momcoll + incomehi + black + cue80, data=col.dist))
+```
+As can be seen, there is no multi-collinearity in our model.  
+  
+ 
+  
+## PROBLEM 2: Blood Pessure  
+## For this problem we are going to explore the effect of weight on blood pressure. The dependent variable (Y) is blood pressure bp. Run any regression using the lm command and display regression tables using the stargazer command.  
+  
+```{r, echo=T, message=F, warning=F}
+# Reading the data:
+blood.press <- read.csv(
+  paste('C:/Users/alibs/Google Drive/Courses/INSH5301 Intro Computational Statistics/',
+  'Module 9 - Multiple Regression 2/bloodPressure/bloodpress.csv', sep=''),
+  stringsAsFactors = F)
+# paste is for breaking the path into multiple lines
+``` 
+  
+## 2.1. Test the hypothesis that weight is related with blood presure using a bivariate model.  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F, results='asis'}
+bp.vs.weight <- lm(BP ~ Weight, data=blood.press)
+
+stargazer(bp.vs.weight, align=TRUE, no.space=TRUE, header=FALSE,
+          title="Blood Pressure vs. Weight",
+          dep.var.labels=c("Blood Pressure"), 
+          covariate.labels=c("Weight"), 
+          omit.stat=c("LL","ser","f"),
+          table.placement = "H" # Hold the position of the table
+         )
+```
+The results look promising. The variables are positively related, i.e. As weight increases, the blood pressure goes up. $R^2$ is high (0.90) and the $adjusted\ R^2$ is also high (0.897). Which means about %90 of the variations in blood pressure, is explained by weight. Let's also plot these two variables against each other to see how they are related:  
+
+```{r, echo=T, message=F, warning=F}
+ggplot(data=blood.press, aes(x=Weight, y=BP))+
+  geom_point()+
+  geom_smooth(method=lm)+
+  xlab('Weight')+ylab('Blood Pressure')+ggtitle('Blood Pressure vs. Weight')
+``` 
+The plot looks alright too and agrees with the model.  
+  
+  
+## 2.2. Use the other variables in the model to correct for OVB.  
+  
+ANS.  
+Let's do what we did in the previous problem. First let's look at the correlations between weight and other variables:  
+```{r, echo=T, message=F, warning=F}
+cor(blood.press)
+```
+As can be seen above, weight has high correlations with Age(0.41), BSA (Body Surface Area)(0.87), Pulse (0.66) and some correlation with Dur (Duration of hypertension)(0.21). Let's examine these parameters:  
+  
+```{r, echo=T, message=F, warning=F}
+# Age:
+bp.w_age <- lm(BP ~ Weight + Age, data=blood.press)
+bp.w_age$coefficients
+
+# BSA:
+bp.w_bsa <- lm(BP ~ Weight + BSA, data=blood.press)
+bp.w_bsa$coefficients
+
+# Pulse:
+bp.w_pulse <- lm(BP ~ Weight + Pulse, data=blood.press)
+bp.w_pulse$coefficients
+
+# Duration of Hypertension:
+bp.w_dur <- lm(BP ~ Weight + Dur, data=blood.press)
+bp.w_dur$coefficients
+```
+  
+  
+## 2.3. Test for multicollinearity.  
+  
+ANS.  
+We've already ran the test for multi-collinearity. It is simply to look at the correlations between independent variables. Multi-collinearity happens when there is a high correlation between two or more variables, meaning that some independent variables can predict the others. Calculating the correlation coeff between all of the variables shows this:  
+```{r, echo=T, message=F, warning=F}
+all.cors <- data.frame(cor(blood.press))
+
+# I consider the correlation above 0.8 high, to make it easier to find the correlations
+# above 0.8, I set all the cors<0.8 to zero:
+all.cors[all.cors<0.8] <- 0
+all.cors
+```
+Now we can quickly recognize the multi-collinearity between weight and BSA. The relationship between these two is obvious! If one has a higher weight, they must have a higher body surface area. Therefore using these two variable as predictor is redundat.    
+  
+We could also use VIF (Variance Inflation Factors) function. The smallest possible value of VIF is 1 (absence of multicollinearity). As a rule of thumb, a VIF value that exceeds 5 or 10 indicates a problematic amount of collinearity.  
+```{r, echo=T, message=F, warning=F}
+vif(lm(BP ~ Pt + Weight + Age + BSA + Dur + Pulse + Stress, data=blood.press))
+```
+Using this method again we can see that Weight/BSA are problematic. Pulse is also on the border.  
+   
+## 2.4. Choose a final functional form and interpret the results.  
+  
+ANS.  
+Based on all of the discussions in the previous parts, I am going with the following model. I included stress and duration in the model initially but they have extremely bad p-values (0.573304 and 0.545485 respectively). The best model is with the following variables. It has an $adjusted\ R^2$ of 0.9904 which is pretty good.  
+```{r, echo=T, message=F, warning=F, results='asis'}
+final.bp.model <- lm(BP ~ Weight + Age, data=blood.press)
+
+stargazer(final.bp.model, align=TRUE, no.space=TRUE, header=FALSE,
+          title="Blood Pressure",
+          dep.var.labels=c("Blood Pressure"), 
+          covariate.labels=c("Weight", "Age"), 
+          omit.stat=c("LL","ser","f"),
+          table.placement = "H" # Hold the position of the table
+         )
+```
+  
+  
+  

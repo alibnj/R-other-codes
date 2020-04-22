@@ -1,0 +1,189 @@
+---
+title: "HW#4-Computation-Statistics"
+author: "Milad Tatari"
+date: "2/3/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+1.a. You get back your exam grade, and you got a 45. The class mean is 70 and the standard
+deviation 10. Assuming that the exam grades follow a normal distribution. What is your z score?
+
+#Solution
+
+$$z=\frac{x-\mu}{\sigma}=\frac{45-70}{10}=-2.5$$
+1.b. What percentile are you?
+
+#Solution
+
+```{r}
+#we can easily calculate the percentile as:
+  pnorm(q=45,mean=70,sd=10);
+
+```
+1.c. What is the total chance of getting something at least that far from the mean, in either direction?
+
+# Solution
+```{r}
+#We can calculate it from Pnorm as it gives the probabity of every data point.
+# It can be in both directions: that far less from the mean or more 
+# we multiply by 2
+
+Chance <-pnorm(q=45,mean=70,sd=10)*2
+Chance
+```
+
+2.a. Write a script that generates a population of at least 10,000 numbers and samples at random 9 of them.
+
+#solution
+```{r}
+set.seed(1)
+population<-rnorm(n=10000,mean=75,sd=10);
+smpl<-sample(population,9,replace=FALSE);
+smpl
+mean(smpl)
+sd(smpl)
+
+```
+
+2.b. Calculate by hand the sample mean. Please show your work using proper mathematical notation using latex.
+
+$$\overline{x}=\frac{\sum_{i = 1}^{9} x_{i}}{9}=\frac{53.61+78.93+65.23+93.53+71.49+71.99+ 94.89+77.01+66.53}{9}=74.8006$$
+2.c. Calculate by hand the sample standard deviation.
+
+$$SD_{sample}=\sqrt\frac{\sum_{i = 1}^{9} (x_{i}-\overline{x})^2}{9-1}=\\ \sqrt(1/8)*(53.61-74.80)^2+(78.93-74.80)^2+(65.23-74.80)^2+(93.53-74.80)^2+\\(71.49-74.80)^2+(71.99-74.80)^2+(94.89-74.80)^2+(77.01-74.80)^2+(66.53-74.80)^2)=13.246$$
+
+2.d. Calculate by hand the standard error.
+
+$$se=\frac{s}{\sqrt{n}}=\frac{13.246}{\sqrt{9}}=4.415$$
+2.e. Calculate by hand the 95% CI using the normal (z) distribution. (You can use R functions or tables to get the score.)
+
+$$P(\overline{x}-1.96se\le \mu \le\overline{x}+1.96se)\cong0.95\\CI_{0.95}=[74.80-1.96*4.4115,74.80+1.96*4.4115]=[66.15,83.44]$$
+# It means that we are 95% sure that the true mean "miu" is between 66.15 and 83.44. 
+2.f. Calculate by hand the 95% CI using the t distribution. (You can use R functions or tables to get the score.)
+
+```{r}
+T<-qt(0.975,8)
+print(T)
+```
+$$P(\overline{x}-T(0.975,8)\le \mu \le\overline{x}+T(0.975,8))\cong0.95\\CI_{0.95}=[74.80-2.30*4.4115,74.80+2.30*4.4115]=[64.65,84.94]$$
+3.a. Explain why 2.e is incorrect
+
+#solution
+
+Since the sample number (n) is relatively small (n<30). The sample statistics (like mean) is not normally distributed around the original data mean (miu). It is better to take into account the effect of n as weel by using the T distribution. T distribution is fatter than normal distribution and when we have a large value of n, they both are almost the same. 
+
+3.b. In a sentence or two each, explain what’s wrong with each of the wrong answers in Module 4.4, “Calculating percentiles and scores,” and suggest what error in thinking might have led someone to choose that answer.
+
+$$3\pm2*1.533$$
+1) it is not correct since it has considered standard deviation (sd) 2. Standarad error needs to be calculated. T score has to be read from degrees of freedom of 3=(n-1). T(0.95,3) instead of T(.9,4). 
+
+$$3\pm1*1.533$$
+2) T score has to be read from degrees of freedom of 3=(n-1). T(0.95,3) instead of T(.9,4).
+
+$$3\pm2*1.638$$
+3) It has used sd, while se needs to be used. Also,  T(0.9,3) is wrongly used
+
+$$3\pm1*2.353$$
+4) COrrect
+$$3\pm1*2.132$$
+5) Incorrect Since T(0.95,4) is wrongly used.
+
+4.a. Based on 2, calculate how many more individuals you would have to sample from your population to shink your 95% CI by 1/2 (ie, reduce the interval to half the size). Please show your work.
+
+#Solution 
+From question 2 and a T distribution we have 
+$$P(64.65\le \mu \le84.94)\cong0.95$$
+we want to reduce the interval by half, first interval is
+
+$$\frac{1}{2}*(84.94-64.65)=10.145$$
+When we want to reduce it to half, we have :
+$$\frac{1}{2}*(84.94+64.65)=74.79\\\frac{10.145}{2}=5.07$$
+So the new interval should be :
+$$P(69.72\le \mu \le79.76)\cong0.95$$
+assuming the mean sample does not change,we have:
+
+$$T(0.975,n_2-1)*\frac{s}{\sqrt{n_2}}=5.07\\T(0.975,n_1-1)*\frac{s}{\sqrt{n_1}}=10.14$$
+n1 and n2 are the number of samples for the fisrt and second sampling respectively. 
+
+Assuming T and s do not change with sampling, we have:
+$$\frac{\sqrt{n_2}}{\sqrt{n_1}}=2\\ \frac{n_2}{n_1}=4 $$
+First, n1=9, so we have n2=4*9=36. We can say that if we increase our samples to 36, the interval of 95% CI by half.
+
+4.b. Say you want to know the average income in the US. Previous studies have suggested that the standard deviation of your sample will be $20,000. How many people do you need to survey to get a 95% cofidence interval of ± $1,000? How many people do you need to survey to get a 95% CI of ± $100?
+
+$$P(\overline{x}-1000\le \mu \le \overline{x}+1000)\cong0.95$$
+We assume that we have normal disribution after sampling, n>30. Let's see what we get at the end.
+
+$$1.96*\frac{s}{\sqrt{n}}=1000\\ 1.96*\frac{20000}{\sqrt{n}}=1000\\ n=1537$$
+so n=1536.64, and we can say that if we have 1537 samples, a 95% cofidence interval of ± $1,000 is achieved. 
+
+How many people do you need to survey to get a 95% CI of ± $100?
+$$1.96*\frac{20000}{\sqrt{n}}=100\\ n=153,664$$
+If we wanna reduce it to ± $100, n has to be 153664.
+
+5. Write a script to test the accuracy of the confidence interval calculation as in Module 4.3. But
+with a few differences:
+(1) Test the 99% CI, not the 95
+(2) Each sample should be only 20 individuals, which means you need to use the t distribution to
+calculate your 99% CI.
+(3)Run 1000 complete samples rather than 100.
+(4) Your population distribution must be different from that used in the lesson, although anything
+else is fine, including any of the other continuous distributions we’ve discussed so far.
+```{r}
+# 1. Set how many times we do the whole thing
+set.seed(1)
+nruns <- 1000
+# 2. Set how many samples to take in each run (20)
+nsamples <- 20
+# 3. Create an empty matrix to hold our summary data: the mean and the upper and lower CI bounds.
+sample_summary <- matrix(NA,nruns,3)
+# 4. Run the loop
+for(j in 1:nruns){
+  sampler <- rep(NA,nsamples)
+  # 5. Our sampling loop
+  for(i in 1:nsamples){
+    # 6. At random we get either a male or female beetle
+    #    If it's male, we draw from the male distribution
+    if(runif(1) < 0.5){
+      sampler[i] <- runif(n=1,min=10,max=20)
+    }
+    #   If it's female, we draw from the female distribution
+    else{
+      sampler[i] <- runif(n=1,min=20,max=30)
+    }
+  } 
+  # 7. Finally, calculate the mean and 95% CI's for each sample 
+  #    and save it in the correct row of our sample_summary matrix
+  sample_summary[j,1] <- mean(sampler)  # mean
+  standard_error <- sd(sampler)/sqrt(nsamples) # standard error
+  sample_summary[j,2] <- mean(sampler) - qt(0.995,19)*standard_error #T distribution
+  sample_summary[j,3] <- mean(sampler) + qt(0.995,19)*standard_error #T distribution
+}
+
+counter = 0
+for(j in 1:nruns){
+  # If 15 is above the lower CI bound and below the upper CI bound:
+  if(20 > sample_summary[j,2] && 20 < sample_summary[j,3]){
+    counter <- counter + 1
+  }
+}
+counter
+
+```
+
+It is good. We can make sure that 99% CI is right about 99% of the time. Since our sample number was small (20), T distribution is used. 
+
+
+
+
+
+
+
+
+
+
+
+

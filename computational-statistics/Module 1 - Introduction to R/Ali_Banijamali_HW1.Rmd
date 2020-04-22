@@ -1,0 +1,113 @@
+---
+title: "INSH5301 Intro Computational Statistics"
+author: "Ali Banijamali"
+date: "01/12/2020"
+output: pdf_document
+---
+
+
+1.a. Create two vectors named v1 and v2, where v1 is the sequence of integers from 2 to 6, and v2 is the sequence of integers from 5 to 9.
+```{r, echo=T, message=F, warning=F}
+v1 <- seq(2,6)
+v1
+v2 <- seq(5,9)
+v2
+```
+
+
+1.b. What is v2 minus v1?
+```{r, echo=T, message=F, warning=F}
+v2-v1
+```
+
+
+1.c. What is the inner product of v1 and v2?
+```{r, echo=T, message=F, warning=F}
+v2%*%v1
+```
+
+
+1.d. Replace the elements in v1+v2 that are greater than 10 with the number 0. Show that vector
+```{r, echo=T, message=F, warning=F}
+v3 <- v1+v2
+v3[v3>10] <- 0
+v3
+```
+
+
+2.a. Create a 5 by 5 matrix with the numbers 1 to 25 as its elements, and call it m1.
+```{r, echo=T, message=F, warning=F}
+m1 <- matrix(1:25, nrow = 5, ncol = 5)
+m1
+```
+
+
+2.b. What is m1 times v1?
+ans.: I don't know exactly what you mean by times. It could be element by element multiplication using * or matrix multiplication using %*%.
+I assumed it is matrix multiplication:
+```{r, echo=T, message=F, warning=F}
+m1%*%v1
+```
+
+
+2.c. What is v1 times m1?
+ans.: I don't know exactly what you mean by times. It could be element by element multiplication using * or matrix multiplication using %*%.
+I assumed it is matrix multiplication:
+```{r, echo=T, message=F, warning=F}
+v1%*%m1
+```
+
+
+2.d. What is m1 times the transpose of m1?
+```{r, echo=T, message=F, warning=F}
+m1%*%t(m1)
+```
+
+
+3.a. Create a date frame with at least five rows and three columns. The first variable (column) should be dates, the second variable should be strings (characters), and the third variable should be numbers. Name each variable something appropriate and short.
+```{r, echo=T, message=F, warning=F}
+sample_df <- data.frame(dates=as.Date(c("2020/01/10", "2020/01/11", "2020/01/12", "2020/01/13", "2020/01/14")),
+                        strings=c("a", "b", "c", "d", "e"),
+                        numbers=c(1, 2, 3, 4, 5), stringsAsFactors = F)
+```
+
+
+3.b. Use str() to show that your data frame is appropriately structured
+```{r, echo=T, message=F, warning=F}
+str(sample_df)
+```
+
+
+3.c. Save it as a csv file, and then reload the data from the csv file
+```{r, echo=T, message=F, warning=F}
+write.csv(sample_df, "C:/Users/alibs/Google Drive/Courses/INSH5301 Intro Computational Statistics/Module 1 - Introduction to R/sample_df.csv", row.names = F)
+sample_df_read <- read.csv("C:/Users/alibs/Google Drive/Courses/INSH5301 Intro Computational Statistics/Module 1 - Introduction to R/sample_df.csv", header = T,
+                           stringsAsFactors = F)
+```
+
+
+3.d. Create a new data frame that is just a subset of your data: the first, third, and last rows, and the first two variables
+```{r, echo=T, message=F, warning=F}
+sample_df_subset <- sample_df[c(1, 3, 5), c(1:2)]
+sample_df_subset
+```
+
+
+3.e. Replace all the even numbers in the original data frame with 0.
+```{r, echo=T, message=F, warning=F}
+sample_df[sample_df$numbers%%2==0, 'numbers'] <- 0
+sample_df
+```
+
+
+3.f. Create a list with v1, v2, m1, and your data frame. Give all the items in that list a name. Now pick out the third item’s second item.
+```{r, echo=T, message=F, warning=F}
+all_items <- list(v1=v1, v2=v2, m1=m1, df=sample_df)
+all_items[[3]][2]
+```
+
+
+4.Using latex equation notation in your .Rmd file, write out the quadratic formula, so that in your html file it looks pretty and like the version we all learned in high school. (Eg, see the box in the top right of this wikipedia page) Quadratic Equation)
+
+$$x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}$$
+

@@ -1,0 +1,161 @@
+---
+title: "INSH5301 Intro Computational Statistics"
+author: "Ali Banijamali"
+date: "03/30/2020"
+output: pdf_document
+header-includes:
+   - \usepackage{dcolumn}    
+   - \usepackage{float}
+---
+
+
+# College Distance (Re-Re-Revisited):  
+## For this problem we are going to explore the effect of distance from college on educational attainment. The dependent variable (Y) is years of completed education ed. Run all the regressions using the lm command and display regression tables using the stargazer command.  
+  
+```{r, echo=T, message=F, warning=F}
+# Required Packages:
+library('stargazer')
+
+# Reading the data:
+col.dist <- read.csv(
+  paste('C:/Users/alibs/Google Drive/Courses/INSH5301 Intro Computational Statistics/',
+  'Module 10 - Advanced Regression Methods/collegeDistance/CollegeDistance.csv', sep=''),
+  stringsAsFactors = F)
+```
+  
+## 1. Run a regression of ed on dist, female, bytest, tuition, black, hispanic, incomehi, ownhome, dadcoll, momcoll, cue80, and, stwmfg80. If dist increase from 2 to 3, how are years of education expected to change? If dist increases from 6 to 7, how are years of education expected to change?  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F, results='asis'}
+ed.vs.params_1 <- lm(ed ~ dist + female + bytest + tuition + black + hispanic +
+                     incomehi + ownhome + dadcoll + momcoll + cue80 + stwmfg80,
+                     data=col.dist)
+
+stargazer(ed.vs.params_1, align=TRUE, no.space=TRUE, header=FALSE,
+          title="Educational Attainment (Years) vs. Other Parameters (1)",
+          dep.var.labels=c("Educational Attainment (Years)"), 
+          omit.stat=c("LL","ser","f"),
+          table.placement = "H" # Hold the table at it's place (Not floating)
+         )
+```
+According to the results above, the coefficient for dist is -0.037, therefore a unit increase in distance, has an effect of -0.037 decrease on education years. It is still the case for 6 to 7. These are both one unit increase and a unit increase in distance, changes education years as much as $1\times(-0.037)$ years.  
+  
+  
+## 2. Run a regression of the natural logarithm of ed on dist, female, bytest, tuition, black, hispanic, incomehi, ownhome, dadcoll, momcoll, cue80, and, Stwmfg80. If dist increase from 2 to 3, how are years of education expected to change? If dist increases from 6 to 7, how are years of education expected to change?  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F, results='asis'}
+log_ed.vs.params_1 <- lm( I(log(ed)) ~ dist + female + bytest + tuition + black +
+                         hispanic + incomehi + ownhome + dadcoll + momcoll +
+                         cue80 + stwmfg80,
+                         data=col.dist)
+
+stargazer(log_ed.vs.params_1, align=TRUE, no.space=TRUE, header=FALSE,
+          title="LOG(Educational Attainment (Years)) vs. Other Parameters (1)",
+          dep.var.labels=c("LOG(Educational Attainment (Years))"), 
+          omit.stat=c("LL","ser","f"),
+          table.placement = "H" # Hold the table at it's place (Not floating)
+         )
+```
+The relationship between the dependant and independant variables is log-linear here. According to the results of regression above, the relationship looks like this (I disregarded other independant variables and just mentioned distance):  
+$\log(ed) = -0.003\times distance+\beta_i\times x_i$  
+Let's see how increasing one unit of distance affects ed:  
+$\log(y_{distance+1})-\log(y_{distance})=[-0.003\times (x+1)+\beta_i\times x_i]-[-0.003\times (x)+\beta_i\times x_i]$  
+Therefore:  
+$\log(\frac{y_{distance+1}}{y_{distance}})=-0.003\ =>\ \frac{y_{distance+1}}{y_{distance}}=e^{-0.003}$  
+This means that for each unit increase in distance (doesn't matter from which distance to which distance, only the difference matters.), ed will be multiplied by $e^{-0.003}$.
+  
+## 3. Run a regression of the natural log ed on dist, dist^2, female, bytest, tuition, black, hispanic, incomehi, ownhome, dadcoll, momcoll, cue80, and, Stwmfg80. If dist increase from 2 to 3, how are years of education expected to change? If dist increases from 6 to 7, how are years of education expected to change?  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F, results='asis'}
+log_ed.vs.params_2 <- lm( I(log(ed)) ~ dist + I(dist^2) + female + bytest + tuition +
+                         black + hispanic + incomehi + ownhome + dadcoll + momcoll +
+                         cue80 + stwmfg80,
+                         data=col.dist)
+
+stargazer(log_ed.vs.params_2, align=TRUE, no.space=TRUE, header=FALSE,
+          title="LOG(Educational Attainment (Years)) vs. Other Parameters (2)",
+          dep.var.labels=c("LOG(Educational Attainment (Years))"), 
+          omit.stat=c("LL","ser","f"),
+          table.placement = "H" # Hold the table at it's place (Not floating)
+         )
+```
+Let's look at the relationship again like the previous question:  
+$\log(ed) = -0.006d+0.0004d^2+\beta_i\times x_i;\ (d:distance)$  
+$\log(y_{d+1})-\log(y_{d})=[-0.006(d+1)+0.0004(d+1)^2+\beta_i\times x_i]-[-0.006d+0.0004d^2+\beta_i\times x_i]$  
+Therefore:  
+$\log(\frac{y_{d+1}}{y_{d}})=-0.0064+0.0008d\ =>\ \frac{y_{d+1}}{y_{d}}=e^{-0.0064+0.0008d}$  
+  
+It can be seen here that there is now a dependency on how distance is changing. To be more specific, it is now important that the unit increase in the distance is from which value to which value. The years of the education will be multiplied by $e^{-0.0064+0.0008d}$ with each unit increase in distance from a distance d. Therefore for 2 to 3 and 6 to 7, these values will be $e^{-0.0064+0.0008(2)}=e^{0.008}$ and $e^{-0.0064+0.0008(6)}=e^{0.0112}$ respectively.  
+  
+  
+## 4. Compare the results of (2), and, (3) to (1). Do you think (1) is a correct specification? (Explain)  
+  
+ANS.  
+Let's look at the detailed summaries of the 3 model:  
+```{r, echo=T, message=F, warning=F}
+# I am using summary() instead of stargazer() to see more details of the models.
+
+# Model 1: linear-linear:
+summary(ed.vs.params_1)
+
+# Model 2: log-linear:
+summary(log_ed.vs.params_1)
+
+# Model 3: log-quadratic:
+summary(log_ed.vs.params_2)
+```
+I don't see a major benefit in models 2 and 3 over 1. All 3 models have a p-value of < 2.2e-16. Model 2 is just a little better than 1: The adjusted $R^2$ barely changed in model 2 (from 0.2813 in model 1 to 0.2830 in model 2), and model 3 is just slightly better than model 2 with and adjusted $R^2$ of 0.2838.  
+    
+  
+## 5. Add the interaction term dadcoll*momcoll to the regression (3). Interpret the coefficient of the interaction term.  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F, results='asis'}
+log_ed.vs.params_3 <- lm(I( log(ed) ) ~ dist + I(dist^2) + female + bytest + tuition +
+                         black + hispanic + incomehi + ownhome + dadcoll + momcoll +
+                         cue80 + stwmfg80 + dadcoll*momcoll,
+                         data=col.dist)
+
+stargazer(log_ed.vs.params_3, align=TRUE, no.space=TRUE, header=FALSE,
+          title="LOG(Educational Attainment (Years)) vs. Other Parameters (3)",
+          dep.var.labels=c("LOG(Educational Attainment (Years))"), 
+          omit.stat=c("LL","ser","f"),
+          table.placement = "H" # Hold the table at it's place (Not floating)
+         )
+```
+The interaction effect is interesting! While father and mother college education, each one independently have positive effects (coeff's are +0.047 and +0.041 respectively), meaning that if each one of the parents have college education, that leads to higher years of education, the interaction effect is negative! (coeff = -0.027), meaning that if both of the parents have college education the total length of education decreases.  
+ 
+
+## 6. Test if the effect of distance on education depends on the family’s income.  
+  
+ANS.  
+For this question we can compare to exactly similar models containng distance, with and without family income variable:  
+```{r, echo=T, message=F, warning=F}
+# 1. Model w/ only distance:
+ed.vs.dist <- lm(ed ~ dist, data=col.dist)
+summary(ed.vs.dist)
+
+# 2. Model w/ distance + family income:
+ed.vs.dist_income <- lm(ed ~ dist + incomehi, data=col.dist)
+summary(ed.vs.dist_income)
+``` 
+The effect of distance barely changed after introducing family income to the model ($\beta$ changed from -0.07337 to -0.05821) and in both models it was significant so I don't think that the effect of distance depends very much on family income.  
+  
+  
+## 7. Use the F-test on (5) as the complete model and (2) as the nested model. What specification do you prefer? (Explain)  
+  
+ANS.  
+From the slides of module 9.3:  
+To test if a set of variables significantly contribute to the regression the solution is to setup an F test. Here, we are not testing all the variables at once, instead, we are testing one set of variables (the complete model) against a subset of variables (the reduced model, where we have droped 1 or more variables).  
+The null hypothesis is that the complete model does no better than the reduced model (ie, that the variables you are debating including are not significant; this is the same null as we have for a single variable when we examine the t statistic on its beta coefficient). And as usual, if we get a F statistic that is sufficiently large, then we conclude that the complete model with the extra variables is signficantly better than the reduced model in explaining y, and thus we are justified in including all the variables under debate.
+
+We can setup this test in R by doing an F test on the complete model vs the reduced model:
+```{r, echo=T, message=F, warning=F}
+# Here, our complete model is: log_ed.vs.params_3
+# and our reduced model is: log_ed.vs.params_1
+anova(log_ed.vs.params_1, log_ed.vs.params_3)
+```
+According to the significance level (0.005405) we can say that the complete model with the additional parameters is better.
+

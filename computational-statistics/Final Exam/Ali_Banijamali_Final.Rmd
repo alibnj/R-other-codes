@@ -1,0 +1,573 @@
+---
+title: "INSH5301 Intro Computational Statistics - Final Exam"
+author: "Ali Banijamali"
+date: "04/21/2020"
+output: pdf_document
+header-includes:
+   - \usepackage{dcolumn}    
+   - \usepackage{float}
+---
+
+# $\underline{Loading\ Libraries\ and\ Data:}$
+```{r, echo=T, message=F, warning=F}
+library(Ecdat) # For housing data set
+library(AER)   # For health insurance data set
+library(ggplot2)
+library(glmnet)
+library(e1071)
+library(stargazer)
+library(knitr)
+library(kableExtra)
+library(car)
+library(psych)
+library(dplyr)
+
+data(Housing)
+kable( head(Housing, 2) , booktabs=T, caption='Housing Dataset') %>%
+  kable_styling( latex_options=c('scale_down', 'hold_position', 'striped'))
+
+data(HealthInsurance)
+kable( head(HealthInsurance, 2) , booktabs=T, caption='Health Insurance Dataset') %>%
+  kable_styling( latex_options=c('scale_down', 'hold_position', 'striped'))
+```
+
+# $\underline{1.\ Bivariate\ Regression}$  
+  
+## 1. Using the Housing dataset, create a scatter plot of sale price of a house (y-axis) and the lot size of the property (x-axis). Use the ggplot function and include a regression line. Using the graph, describe the relation between the two variables.  
+   
+ANS.  
+```{r, echo=T, message=F, warning=F}
+ggplot(data=Housing, aes(x=lotsize, y=price)) + geom_point() + geom_smooth(method=lm) +
+  xlab('Lot Size') + ylab('Price') +
+  ggtitle('Lot Size vs. Price of the Property')
+```
+According to the plot, there is a positive relationship between Lot Size and the price of the property. Meaning, as the size of the lot increases, the price of the property goes up.  
+  
+## 2. Estimate a bivariate regression of the sale price of a house on the lot size of the property. Interpret the estimated $\beta$ parameters, the statistical significance and $R^2$.  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F, results='asis'}
+bivar.model <- lm(price ~ lotsize, data=Housing)
+
+stargazer(bivar.model, align=T, no.space=T, header=F,
+          title="Price of the Property vs. Lot Size",
+          dep.var.labels=c("Price"), 
+          covariate.labels=c("Lot Size"), 
+          omit.stat=c("LL", "ser", "f"),
+          table.placement = "H" # TO hold the table at it's place (Not floating)
+          # Floting tables get out of order in the printed output
+         )
+```
+$\beta=+\ 6.599$ This shows a positive correlation, i.e. as the lotsize of the houses increase, their price goes up. The estimated $\beta$ is statistically significant (p-value<2.2e-16) and the adjusted $R^2$ which almost equals to the $R^2$ in our case, because we only have one independent variable, is 0.286. meaning the independent variable (lot size), explains ~%29 of the variations in the house's price. $\beta$ also tells us that each square foot increase in the lotsize, increases the price of the house by ~6.6:   
+$$Price=6.599(lotsize)+34,136.190$$
+ 
+## 3. Is there any reason to believe that the estimated slope parameter in the previous regression is biased? (Explain)  
+  
+ANS.  
+I think the lot size of the house is a reasonable variable for explainging the price of the property by itself, but let's look at other variables in our data:  
+```{r, echo=T, message=F, warning=F}
+colnames(Housing)
+```
+  
+First, Let's think of exogeneity. When exogeneity is violated, our model will suffer from the Omitted Variable Bias (OVB). I will get a regression with all variables:  
+```{r, echo=T, message=F, warning=F, results='asis'}
+ex.check <- lm(price ~ ., data=Housing)
+stargazer(ex.check, align=T, no.space=T, header=F,
+          title="Price of the Property vs. all vars",
+          dep.var.labels=c("Price"), 
+          omit.stat=c("LL", "ser", "f"),
+          table.placement = "H")
+```
+  
+As we can see, lotsize still has a sigificant role, so it is a predictor. However, the coefficient decreased when we introduced new parameters. This is evidence of violation of exogeneity and we can say that the slope is biased. Let's look at the correlations too (I am examining only numeric values for now):    
+```{r, echo=T, message=F, warning=F, results='asis'}
+kable(cor(Housing[c(1:5, 11)]), booktabs=T,
+      caption='Correlation between Numerical Variables') %>%
+  kable_styling( latex_options=c('striped', 'hold_position'))
+```
+  
+We can see that lotsize and price have an acceptable correlation with all other variables. This too is another evidence of OVB.   
+   
+# $\underline{2.\ Multivariate\ Regression}$ 
+  
+## 4. Using the rest of the variables in the dataset, construct a correlation matrix and use it to check if the assumption of exogeneity is valid in the estimated model in question (2). (Explain) Hint: See module 13’s Memo 3 for dummies and then see Module 13’s Memo 1 to get familiar with OV B, explain accordingly.  
+  
+ANS.  
+lm model recognizes factors as different categories and can handle dummy variables, but cor() doesn't understand non-numeric values, so I have to define dummy variables manually for it:  
+```{r, echo=T, message=F, warning=F, results='asis'}
+Housing.d <- cbind(Housing[1:5],
+                   driveway =ifelse(Housing$driveway=='yes', 1, 0),
+                   recroom  =ifelse(Housing$recroom =='yes', 1, 0),
+                   fullbase =ifelse(Housing$fullbase=='yes', 1, 0),
+                   gashw    =ifelse(Housing$gashw   =='yes', 1, 0),
+                   airco    =ifelse(Housing$airco   =='yes', 1, 0),
+                   Housing[11],
+                   prefarea =ifelse(Housing$prefarea=='yes', 1, 0))
+
+kable( head(Housing.d, 2) , booktabs=T, caption='Housing Dataset w/ Dummies') %>%
+  kable_styling( latex_options=c('scale_down', 'hold_position', 'striped'))
+
+kable(cor(Housing.d), booktabs=T, caption='Correlation between All Variables') %>%
+  kable_styling( latex_options=c('scale_down', 'striped', 'hold_position'))
+```
+  
+Many of these variables (Table 7) seem to have relatively high correlation with both price and lotsize. In particular, look at bedrooms, bathrms, driveway, recroom, airco, garagepl and prefarea. So exogeneity was probably violated in the bivariate model.  
+  
+## 5. Estimate a set of multivariate models to address the potential issue of OVB, adding at most one additional variable each time. (See Memo 2: Multivariate Models under Real World Example) Display all the estimated models side-by-side (you may need two or more stargazer tables here). Using the multivariate models, do you think there is evidence that the estimated parameter in (2) was biased? which of the estimated models you consider the least bias (from now on, we’ll call this model the best model)?  
+## Hint: See Module 13’s Memo 1 to get familiar with OV B, and follow Memo 2’s Multivariate Models to add one variable each time.  
+    
+ANS.  
+First, I am not including gashw in the model, because it has very poor correlation with both price and lotsize. Let's check other variables one by one:  
+```{r, echo=T, message=F, warning=F, results='asis'}
+mv.model.1 <- lm(price ~ lotsize + bedrooms, data=Housing.d)
+mv.model.2 <- lm(price ~ lotsize + bedrooms + bathrms, data=Housing.d)
+mv.model.3 <- lm(price ~ lotsize + bedrooms + bathrms + driveway,
+                 data=Housing.d)
+mv.model.4 <- lm(price ~ lotsize + bedrooms + bathrms + driveway + recroom, 
+                 data=Housing.d)
+mv.model.5 <- lm(price ~ lotsize + bedrooms + bathrms + driveway + recroom + 
+                 airco, data=Housing.d)
+mv.model.6 <- lm(price ~ lotsize + bedrooms + bathrms + driveway + recroom + 
+                 airco + garagepl, data=Housing.d)
+mv.model.7 <- lm(price ~ lotsize + bedrooms + bathrms + driveway + recroom + 
+                 airco + garagepl + prefarea, data=Housing.d)
+mv.model.8 <- lm(price ~ lotsize + bedrooms + bathrms + driveway + recroom + 
+                 airco + garagepl + prefarea + fullbase, data=Housing.d)
+mv.model.9 <- lm(price ~ lotsize + bedrooms + bathrms + driveway + recroom + 
+                 airco + garagepl + prefarea + fullbase + stories, data=Housing.d)
+
+
+stargazer(list(bivar.model, mv.model.1, mv.model.2, mv.model.3, mv.model.4),
+          align=T, no.space=T, header=F,
+          title="Comparison of Models Part 1",
+          column.sep.width = "1pt",
+          dep.var.labels=c("Price"), 
+          omit.stat=c("LL", "ser", "f"),
+          table.placement = "H")
+
+stargazer(list(mv.model.5, mv.model.6, mv.model.7, mv.model.8, mv.model.9),
+          align=T, no.space=T, header=F,
+          title="Comparison of Models Part 2",
+          column.sep.width = "1pt",
+          dep.var.labels=c("Price"), 
+          omit.stat=c("LL", "ser", "f"),
+          table.placement = "H")
+```
+  
+Now let's talk about the models:
+  
+1. As we add more variables, the amplitude of $\beta$ for lotsize decreases, this tells us that there was OVB. However, this variable (lotsize), remains a strong and significant predictor even after adding new independent variables. During the addition of extra parameters we can see that addition of recroom had a very small effect on the coefficient of lotsize. This means that we can probably remove it.  
+2. Let's look at how adjusted $R^2$ increased after addition of variables:
+- mv.1: bedrooms: ~ + %8.2
+- mv.2: bathrms:  ~ + %11.5
+- mv.3: driveway: ~ + %2.7
+- mv.4: recroom:  ~ + %1.5
+- mv.5: airco:    ~ + %6.4
+- mv.6: garagepl: ~ + %1.4
+- mv.7: prefarea: ~ + %2.1
+- mv.8: fullbase: ~ + %0.1
+- mv.9: stories:  ~ + %3.2  
+We can see that fullbase almost didn't change the adjusted $R^2$ at all.  
+  
+3. By looking at the significance level of the variables in the last model (mv.9) we can also see that bedrooms and recroom are not significant any more.  
+  
+So let's now look at a model with these variables: lotsize, bathrooms, driveway, airco, garagepl, prefarea and stories:  
+  
+```{r, echo=T, message=F, warning=F, results='asis'}
+best.mv.model <- lm(price ~ lotsize + bathrms + driveway + airco +  
+                    garagepl + prefarea + stories, data=Housing.d)
+
+stargazer(best.mv.model,
+          align=T, no.space=T, header=F,
+          title="Best MV Model",
+          column.sep.width = "1pt",
+          dep.var.labels=c("Price"), 
+          omit.stat=c("LL", "ser", "f", "n"),
+          table.placement = "H")
+```
+  
+This model looks very good. All of the variables are significant, the model doesn't have too many vaiables and has a good adjusted $R^2$. I'll keep this configuration as the best multivariate model.  
+  
+## 6. Check if the best model suffers from multicollinearity (if it does, don’t try to fix it, just explain $\beta$ what problems it may cause).  
+## Hint:Use vif() in car package to easily calculate VIF and lecture 13’s Memo 2 of multicollinearity to explain.  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F}
+# Looking at multicollinearity:
+kable(t(vif(best.mv.model)), booktabs=T, caption='Best Model Multicollinearity Test') %>%
+  kable_styling( latex_options=c('hold_position'))
+```
+As we can see in Table 11, all values are below 5. This means weak imperfect multicollinearity and is not an issue at all. We can also test the model with all of the variabes:  
+```{r, echo=T, message=F, warning=F}
+kable(t(vif(mv.model.9)), booktabs=T, caption='All Vars Model Multicollinearity Test') %>%
+  kable_styling( latex_options=c('hold_position', 'scale_down'))
+```
+As we can see in Table 12, here too, the multicollinearity isn't an issue at all. All of the values are below 5, which means weak imperfect multicollinearity.  
+
+  
+# $\underline{3.\ Non-linear\ Functional\ Forms}$
+  
+## 7. Take a look at the graph from part (1), do you think there is any reason to believe that the effect of lot size on price is not the same for all the domain of lot size? if yes, is the effect increasing or decreasing?  
+  
+ANS.  
+Looking closer at the data, we can see that the effect of the lotsize is fairly linear with a positive slope up to 4000~5000 sq.ft. At some point around 6000 sq.ft, it looks like the slope is either decreased (the prices are stagnated) or the prices have a sudden jump. After that we really don't have a lot of data points to have a fair judgement about the trend of the data but it seems like there is no more steep slope and this means that at higher lotsizes, the prices are not increasing sharply with lotsizes and we can say that while the slope is sharp at the start, it gets flatter after a point in higher lotsizes.  
+  
+  
+## 8. Estimate the best model again, but this time transform the lot size variable to natural logarithms. Interpret the estimated parameter for log of the lot size.  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F, results='asis'}
+best.mv.log <- lm(price ~ I(log(lotsize)) + bathrms + driveway + airco +  
+                  garagepl + prefarea + stories, data=Housing.d)
+
+stargazer(best.mv.log, align=T, no.space=T, header=F,
+          title="Best MV model + log term",
+          column.sep.width = "1pt",
+          dep.var.labels=c("Price"), 
+          omit.stat=c("LL", "ser"),
+          table.placement = "H")
+```
+The estimated coefficient for the $log(lotsize)$ term is 20,629.980. Let's see what it means. Let's say we increase the lotsize of a property 1 square ft $(x \rightarrow x+1)$, how much does the price change?  
+$price_1=20,629.980\times log(x)$  
+$price_2=20,629.980\times log(x+1)$  
+$price_2-price_1=20,629.980(log(x+1)-log(x))=20,629.980\times log(\frac{x+1}{x})$  
+This means that a unit square ft of increase in the lotsize from $x\ sq.ft$ to $(x+1)\ sq.ft$, increase/deacreases the price as much as $20,629.980\ log(\frac{x+1}{x})$. Note that we didn't include other parameters in our calculations because if they remain constant, they will be cancelled out of the equations.  
+  
+## 9. Estimate the best model twice: (a) first, adding a quadratic term for lot size, and, (b) second, adding a quadratic and cubic terms. Using the change in lot size as a one standard deviation change from the mean, compare the effect of lot size in the original model, model (a), and, model (b). Can you reject the hypothesis that the relation between lot size and price is linear? quadratic? cubic? (Explain)  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F, results='asis'}
+# a) lotsize quadratic:
+best.mv.quad <- lm(price ~ lotsize + I(lotsize^2) + bathrms + driveway + airco +  
+                   garagepl + prefarea + stories, data=Housing.d)
+
+stargazer(best.mv.quad, align=T, no.space=T, header=F,
+          title="Best MV model + quadratic term",
+          column.sep.width = "1pt",
+          dep.var.labels=c("Price"), 
+          omit.stat=c("LL", "ser"),
+          table.placement = "H")
+
+# b) lotsize quadratic and cubic:
+best.mv.quad.cub <- lm(price ~ lotsize + I(lotsize^2) + I(lotsize^3) + bathrms +    
+                       driveway + airco +garagepl + prefarea + stories, data=Housing.d)
+
+stargazer(best.mv.quad.cub, align=T, no.space=T, header=F,
+          title="Best MV model + quadratic and cubic term",
+          column.sep.width = "1pt",
+          dep.var.labels=c("Price"), 
+          omit.stat=c("LL", "ser"),
+          table.placement = "H")
+
+# Making the dataset to feed into predict()
+mean <- mean(Housing.d$lotsize)
+mean.plus.sd <- mean + sd(Housing.d$lotsize)
+
+check.data <- Housing.d[1:2, 2:12]
+check.data[1:11] <- 1
+check.data[1:2, 1] <- c(mean, mean.plus.sd)
+# ^ Note that since we are examining lotsize, it was only important to have the values
+# for lotsize, all other values are equal to 1 in both rows:
+
+kable( head(check.data, 2) , booktabs=T, caption='Feeded data') %>%
+kable_styling( latex_options=c('scale_down', 'hold_position', 'striped'))
+
+# Change in price by changing lotsize from mean(lotsize) to mean + sd(lotsize):
+
+# a) Multivariate model (linear lotsize)
+linear.preds <- predict(best.mv.model, check.data)
+linear.diff  <- linear.preds[2] - linear.preds[1]
+
+# b) Multivariate model (quadratic lotsize)
+quad.preds <- predict(best.mv.quad, check.data)
+quad.diff  <- quad.preds[2] - quad.preds[1]
+
+# c) Multivariate model (quadratic+cubic lotsize)
+quad.cub.preds <- predict(best.mv.quad.cub, check.data)
+quad.cub.diff  <- quad.cub.preds[2] - quad.cub.preds[1]
+
+# Dispalying the results:
+diff.results <- data.frame(linear.model=linear.diff,
+                           quadratic.model=quad.diff,
+                           quadratic.cubic.model=quad.cub.diff)
+row.names(diff.results) <- NULL
+
+kable(head(diff.results), booktabs=T, 
+      caption='Comparison of Differences for Different Models') %>%
+  kable_styling( latex_options=c('hold_position'))
+```
+
+Let's look at the plot in question 1 again, but this time let's highlight our regions of interest:  
+  
+```{r, echo=T, message=F, warning=F}
+ggplot(data=Housing, aes(x=lotsize, y=price)) + geom_point() + 
+  geom_rect(aes(xmin=5150, xmax=7318, ymin=25000,
+                ymax=200000), colour="transparent", fill="yellow2", alpha=0.005) + 
+  
+  geom_hline(color='greenyellow', yintercept=linear.preds[1]) +
+  geom_hline(color='greenyellow', yintercept=linear.preds[2]) +
+  
+  geom_hline(color='salmon', yintercept=quad.preds[1]) +
+  geom_hline(color='salmon', yintercept=quad.preds[2]) +
+  
+  geom_hline(color='darkviolet', yintercept=quad.cub.preds[1]) +
+  geom_hline(color='darkviolet', yintercept=quad.cub.preds[2]) +
+  
+  xlab('Lot Size') + ylab('Price') +
+  ggtitle('Lot Size vs. Price of the Property')
+```
+  
+The yellow region is from mean of lotsize to one standard deviation after the mean. I have added lines showing the location of predicted prices by each model. The green line shows the predictions of the linear model; the pink lines show the predictions of the quadratic model, and the dark violet lines show the predictions of the cubic model.   
+  
+This is honestly a tricky question. It looks like the correct answer for this question shouldn't be the linear model but the evidence that I am seeing tells me otherwise. At least, there is little benefit in using cubic model. Let's look at some of our findings:  
+  
+- For linear(lotsize) model:  
+Coeff (lotsize) = 3.599  $\rightarrow$ p-value = < 2e-16 (significant)  
+Residual standard error: 15830 on 537 degrees of freedom  
+Multiple R-squared:  0.6535,	Adjusted R-squared:  0.6484  
+p-value: < 2.2e-16  
+  
+- For quadratic(lotsize) model:  
+Coeff (lotsize) = 6.345 $\rightarrow$ p-value = 5.77e-07 (significant)  
+Coeff (lotsize^2) = -2.020e-04 $\rightarrow$ p-value = 0.02217 (Ok)  
+Residual standard error: 15990 on 537 degrees of freedom  
+Multiple R-squared:  0.6465,	Adjusted R-squared:  0.6413  
+p-value: < 2.2e-16  
+  
+- For cubic(lotsize) model:  
+Coeff (lotsize) = 13.40 $\rightarrow$ p-value = 0.000277 (significant)  
+Coeff (lotsize^2) = -1.253e-03 $\rightarrow$ p-value = 0.016283 (Better)  
+Coeff (lotsize^3) = 4.487e-08 $\rightarrow$ p-value = 0.040761 (Ok?)  
+Residual standard error: 15950 on 536 degrees of freedom  
+Multiple R-squared:  0.6493,	Adjusted R-squared:  0.6434  
+p-value: < 2.2e-16  
+  
+So, As it can be seen, the error of the models have increased as we added non-linear terms, we have made the models more complex with parameters which are not super significant, and we have gained very little increase in adjusted $R^2$ from quadratic to cubic and compared to the linear model both of these are even lower! So, I would ask why bother doing it at all? Let's look at another piece of evidence here, $R^2$ has increased, but the adjusted $R^2$ has decreased in the nonlinear models. This itself is telling us that the addition of the new non-linear terms are not helping the model.  
+  
+On the other hand, there is only one argument that may justify using the cubic model. If based on the scatter plot, we argue that there is a sharp slope in the beginning, a stagnated region with flat slope afterwards, and a much less sharp slope region after that at the end, this behavior will need a cubic function to be explained, and the fact that $price_{mean+sd(lotsize)}-price_{mean(lotsize)}$ for the cubic model is less than the quadratic and linear model, shows that it has better captured the stagnated central region.   
+  
+  
+## 10. Using the best model as the nested model, test the hypothesis that the effect of lot size on price is moderated by prefarea.  
+  
+ANS.  
+In order to check for the moderation effect between lotsize and prefarea, I'll add an interaction term lotsize$\times$prefarea to the model and check if it is significant.  
+
+```{r, echo=T, message=F, warning=F, results='asis'}
+mod.effect <- lm(price ~ lotsize + bathrms + driveway + airco +  
+                 garagepl + prefarea + stories + lotsize*prefarea, data=Housing.d)
+
+stargazer(mod.effect, align=T, no.space=T, header=F,
+          title="Best MV model with Interaction Term",
+          column.sep.width = "1pt",
+          dep.var.labels=c("Price"), 
+          omit.stat=c("LL", "ser"),
+          table.placement = "H")
+```
+Judging by the p-value of 0.112018 for the interaction term (lotsize$\times$prefarea), which is not significant I can say there is no moderation effect here.    
+  
+# $\underline{4.\ Unsupervised\ Machine\ Learning}$  
+  
+## 11. Run a factor analysis or PCA on the Housing dataset, examine the loadings of the factors on the variables. Sort the variables by their loadings, and try to interpret what the first one “mean”.  
+  
+ANS.  
+I am using PCA. Since PCA is a variance-based model, it is necessary to scale all variables to be in the same order first.  
+  
+Also, I am removing price from the data because I think it is the dependent variable and everything else are independent variables which predict price. Therefore, it makes sense to take it out of the data before running PCA.    
+```{r, echo=T, message=F, warning=F}
+# Scaling the dataset between 0 to 1:
+Housing.d.sc <- apply(Housing.d[2:12], 2,
+                      FUN=function(x){(x-min(x))/(max(x)-min(x))})
+                      # the function scales between 0 to 1
+
+kable(head(Housing.d.sc, 2), booktabs=T, caption='Housing Dataset Scaled w/ Dummies') %>%
+  kable_styling( latex_options=c('scale_down', 'hold_position', 'striped'))
+
+# PCA using singular value decomposition (SVD):
+pca <- prcomp(Housing.d.sc)
+# 1st component:
+kable(t(pca$rotation[ ,1][order(pca$rotation[ ,1])]), booktabs=T,
+      caption='First Principal Component') %>%
+  kable_styling( latex_options=c('hold_position', 'scale_down')) # order() for sorting
+```
+The result is interesting. Here we can see the two poles of the 1st PC. On one side, we have stories, number of bedrooms and bathrooms, lotsize and generally variables which are related to the size of the property (with the exception of gashw). On the other side, we can see variables mostly about amenities of the building like whether it has a full finished basement or does the house has recreational room or an airconditioner or is it in a preferred neighborhood?  
+  
+I think one side of the first PC (Table 20) is where most of the home buyer will consider: the main/basic features, the other side is probably the concern of wealthier buyers which are looking for more than the basic features of the property.  
+  
+Let's do a factor analysis too:  
+```{r, echo=T, message=F, warning=F}
+# Factor Analysis:
+fact <- fa(Housing.d.sc, nfactors=2)
+# 1st component:
+kable(t(fact$loadings[ ,1][order(fact$loadings[ ,1])]), booktabs=T,
+      caption='First Factor') %>%
+  kable_styling( latex_options=c('hold_position', 'scale_down')) # order() for sorting
+```
+The result here is very similar to PCA and maybe even better! Looking at Table 21, on the left side we can see variables like fullbase, recroom, prefarea (aminities/secondary factors), on the other side there are stories, bedroom, bathroom, ... (size of the property/fundamental factors).  
+  
+## 12. Use k-means algorithm and examine the centers of each cluster using only two centroids. How are they similar to and different from the factor loadings of the first factor?  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F}
+set.seed(1)
+# Running kmeans w/ 2 centers and 25 random start:
+kmeans <- kmeans(Housing.d.sc, centers=2, nstart=25)
+
+kmeans.centroids <- kmeans$centers
+
+kmeans.topvars_centroid1 <- kmeans.centroids[1, order(kmeans.centroids[1, ])]
+kable(t(tail(kmeans.topvars_centroid1)), booktabs=T, caption='Fisrt Centroid') %>%
+  kable_styling( latex_options=c('hold_position'))
+
+kmeans.topvars_centroid2 <- kmeans.centroids[2, order(kmeans.centroids[2, ])]
+kable(t(tail(kmeans.topvars_centroid2)), booktabs=T, caption='Second Centroid') %>%
+  kable_styling( latex_options=c('hold_position'))
+```
+Here, the first centroid (Table 22), has more in common with the right pole of the first PC, the amenities and the secondary features (with the exception of the bedrooms). The second centroid (Table 23), has more in with the left pole of the PC, the first order of importance variables, the more basic and fundamental features mainly about the size of the building.   
+  
+  
+# $\underline{5.\ Supervised\ Machine\ Learning}$  
+  
+## 13. Divide the Housing data into two equally sized samples (one for training and one for testing). The dependent variable is price. Using the training sample, estimate a ridge model using the Housing dataset and find the optimal value of $\lambda$.  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F}
+# Selecting test/train samples:
+# Scaling data:
+Housing.d.sc <- apply(Housing.d, 2,
+                      FUN=function(x){(x-min(x))/(max(x)-min(x))})
+
+set.seed(1)
+train.ind <- sample(1:nrow(Housing.d.sc), nrow(Housing.d.sc)/2)
+
+data.x  <- Housing.d.sc[ ,2:12]
+data.y  <- Housing.d.sc[ ,1]
+
+train.x <- data.x[train.ind, ]
+train.y <- data.y[train.ind] 
+
+test.x  <- data.x[-train.ind, ]
+test.y  <- data.y[-train.ind]
+
+lambdas <- 10^seq(7, -2, length=100) # 100 values from 10^-2 to 10^7
+
+# Using cv.glmnet to find the best value of lambda:
+# alpha = 0: Purely Ridge model
+ridge.model <- cv.glmnet(train.x, train.y, alpha=0, lambda=lambdas)
+# Choosing best lambda:
+best.lambda <- ridge.model$lambda.min
+cat('Optimal value of Lambda for Ridge model is: ', best.lambda)
+```
+  
+  
+## 14. How does the model performs in the testing sample? Compare the results of the ridge model with a linear regression. Which model performs best?  
+  
+ANS.  
+It is not exactly stated which linear model. So, I will compare it with one bivariate model (price ~ lotsize) and one multiple regression model with all variables:  
+```{r, echo=T, message=F, warning=F}
+# Checking the performance of Ridge model on test data:
+test.y.prediction.r <- predict(ridge.model$glmnet.fit, s=best.lambda, newx=test.x)
+mse.test.r <- sum((test.y - test.y.prediction.r)^2) / nrow(test.x)
+mse.test.r
+
+# Linear regression model:
+# a. Biavriate model:
+bivar.model <- lm(train.y ~ train.x[ ,1]) # price ~ lotsize
+test.y.prediction.b <- cbind(1, test.x[ ,1]) %*% bivar.model$coefficients
+mse.test.b <- sum((test.y - test.y.prediction.b)^2) / nrow(test.x)
+mse.test.b
+
+# b. Multivariate model:
+multivar.model <- lm(train.y ~ train.x) # price ~ all variables
+test.y.prediction.m <- cbind(1, test.x) %*% multivar.model$coefficients
+mse.test.m <- sum((test.y - test.y.prediction.m)^2) / nrow(test.x)
+mse.test.m
+```
+As we can see, the bivariate model has a ~ %101.1 larger error compared to th Ridge model but the multivariate model is very close to Ridge model with only ~ %2.3 larger error. Overall, Ridge model did a better job on test data.    
+  
+## 15. Using the HealthInsurance dataset. Divide the data into two equally sized samples (one for training and one for testing). The dependent variable is health. Using the training sample; and a radial kernel and the following two values for cost C = (1e - 05, 1e + 01), estimate a support vector machine model and choose the optimal cost parameter using the function tune. (In this part, feel free to reduce the size of each sample to improve the speed of the calculations.)  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F}
+# 1. Preparing data for svm:
+HealthInsurance.d <- HealthInsurance
+# Making variables dummy:
+HealthInsurance.d[ ,c(1, 3, 5:7)] <- apply(HealthInsurance.d[ ,c(1, 3, 5:7)], 2,
+                                           FUN=function(x){ifelse(x=='yes', 1, 0)})
+HealthInsurance.d$gender <- ifelse(HealthInsurance.d$gender=='male', 0, 1)
+
+# A function for making dummy vars (drops the 1st lvl)
+dummy.creator <- function(x){
+  level <- levels(x)[-1] # droping the first level 
+  y <- data.frame(ifelse(x==level[1], 1, 0))
+  for (i in 2:length(level)) {
+    z <- data.frame(ifelse(x==level[i], 1, 0))
+    y <- cbind(y, z)
+  }
+  colnames(y) <- level
+  return(y)
+}
+
+HealthInsurance.d <- cbind(HealthInsurance.d[ ,1:8],
+                           dummy.creator(HealthInsurance.d[ ,9]),
+                           dummy.creator(HealthInsurance.d[ ,10]),
+                           dummy.creator(HealthInsurance.d[ ,11]))
+# Scaling between 0 and 1:
+HealthInsurance.d.sc <- data.frame(apply(HealthInsurance.d, 2,
+                                         FUN=function(x){(x-min(x))/(max(x)-min(x))}))
+# Making the dependent variable dummy:
+HealthInsurance.d.sc$health <- as.factor(HealthInsurance.d.sc$health)
+
+kable( head(HealthInsurance.d.sc, 2) , booktabs=T,
+       caption='Health Insurance Dataset Scaled w/ Dummies') %>%
+  kable_styling( latex_options=c('scale_down', 'hold_position', 'striped'))
+
+# 2. Selecting the test/train samples:
+set.seed(1)
+train.ind  <- sample(1:nrow(HealthInsurance.d.sc), nrow(HealthInsurance.d.sc)/2)
+
+train.data <- HealthInsurance.d.sc[train.ind, ]
+test.data  <- HealthInsurance.d.sc[-train.ind, ]
+
+# 3. Choosing the best SVM model:
+cost.values <- c(1e-5, 1e+1)
+
+svm <- tune(svm, health~., data=train.data,
+            ranges=list(cost=cost.values), kernel="radial")
+summary(svm)
+```
+  
+  
+## 16. How does the svm model performs in the testing sample? How does the model compares to a logit in terms of accuracy?  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F}
+# 1. Performance of the SVM model:
+svm.pred.test.y <- predict(svm$best.model, newdata=test.data)
+
+# Percentage of correct predictions using the test data:
+sum(svm.pred.test.y==test.data$health)*100/nrow(test.data)
+
+# 2. Logit model:
+logit <- glm(health~., data=train.data, family="binomial")
+
+# 3. Performance of Logit model:
+logit.ped.test.y <- round( predict(logit, newdata=test.data, type="response") )
+# The "reponse" option was used to the get predicted probabilities,
+# and then the results were rounded, so that any predicted prob > 0.5 is a 1,
+# and vice versa for 0.
+
+# Percentage of correct predictions:
+sum(logit.ped.test.y==test.data$health)*100/nrow(test.data)
+```
+As we can see, the two models have almost similar performance. Logit model did a hair better but they are so close that we can't really announce a winner between two models.  
+  
+However, there is one thing that I think needs to be discussed. The SVM model, only returns Yes for health status, meaning it predicts all of the subjects as healthy. You might think why a model that always predicts one thing has such accuracy? It is because the data is unbalanced. Let's take a closer look at the data:  
+```{r, echo=T, message=F, warning=F}
+# Percentage of Yes in the health status column:
+nrow(HealthInsurance.d.sc[HealthInsurance.d.sc$health==1, ])*100/
+  nrow(HealthInsurance.d.sc)
+```
+As we can see, %92.8 of the people in the dataset are healthy, so any random model which always predicts 'Yes' for health status, will get a %92.8 accuracy. So, just by looking at the correct prediction rate we can't be really sure if the SVM model actually did a good job or not. There are special procedures to deal with these types of unbalanced datasets which I assume weren't the purpose of this question and I would suffice to just mention what is happening here.   
+
+
+

@@ -1,0 +1,158 @@
+---
+title: "INSH5301 Intro Computational Statistics"
+author: "Ali Banijamali"
+date: "01/20/2020"
+output: pdf_document
+---
+
+
+1.a. Write a function that calculates the mean of any numeric vector you give it, without using the built-in mean() or sum() functions.
+```{r, echo=T, message=F, warning=F}
+mean.func <- function(x){
+  len <- length(x)
+  sum <- 0
+  for (i in 1:len){
+    sum <- sum + x[i]
+  }
+  return(sum/len)
+}
+
+mean.func(c(1,2,3,4))
+```
+
+
+1.b. Write a function that takes as its input a vector with four elements. If the sum of the first two elements is greater than the sum of the second two, the function returns the vector; otherwise it returns 0.
+```{r, echo=T, message=F, warning=F}
+compare.func <- function(x){
+  first <- x[1]+x[2]
+  second <- x[3]+x[4]
+  if (first>second){
+    return(x)
+  }
+  else{print(0)}
+}
+
+compare.func(c(1,10,3,4))
+
+compare.func(c(1,2,3,4))
+```
+
+
+1.c. Write a function that calculates the Fibonacci sequence up to the nth element, where n is any number input into your function (its argument). The Fibonacci sequence is: 1, 1, 2, 3, 5, 8, 13, 21. . . , ie, each element is the sum of the previous two elements. One way to do this is to start off with the first two elements, c(1,1) and set an internal variable to this sequence. Then write a loop that counts up to n, where for each new element, you first calculate it by adding the last two elements of the growing sequence, and then stick that new number onto the growing sequence using c(). When the loop is finished, the function should return the final vector of Fibonacci numbers
+```{r, echo=T, message=F, warning=F}
+fibo.func <- function(n){
+  fibo <- rep(1, n)
+  for (i in 1:(n-2)) {
+    fibo[i+2] <- fibo[i]+fibo[i+1]
+  }
+  return(fibo)
+}
+
+fibo.func(8)
+```
+
+
+1.d. Create a 4x4 matrix of the numbers 1 through 16. Use apply to apply you function from (a) to each of the rows in your matrix.
+```{r, echo=T, message=F, warning=F}
+my.matrix <- matrix(1:16, nrow = 4, ncol = 4)
+my.matrix
+
+apply(my.matrix, 1, mean.func)
+```
+
+
+2.a. Using the airquality dataset, constuct an aggregated dataset which shows the maximum wind and ozone by month.
+```{r, echo=T, message=F, warning=F}
+air.data <- airquality
+
+max.wind <- aggregate(air.data$Wind, by=list(air.data$Month), max)
+max.wind
+
+air.data <- na.omit(air.data)
+max.ozone <- aggregate(air.data$Ozone, by=list(air.data$Month), max)
+max.ozone
+```
+
+
+2.b. Create the authors and books datasets following the example and data in the lecture, and then create a new data set by merging these two datasets by author, preserving all rows.
+```{r, echo=T, message=F, warning=F}
+authors <- data.frame(
+    surname = c("Tukey", "Venables", "Tierney", "Ripley", "McNeil"), 
+    nationality = c("US", "Australia", "US", "UK", "Australia"),
+    stringsAsFactors=FALSE)
+books <- data.frame(
+    name = c("Tukey", "Venables", "Tierney",
+               "Ripley", "Ripley", "McNeil", "R Core"),
+    title = c("Exploratory Data Analysis",
+              "Modern Applied Statistics ...",
+              "LISP-STAT",
+              "Spatial Statistics", "Stochastic Simulation",
+              "Interactive Data Analysis",
+              "An Introduction to R"),
+    stringsAsFactors=FALSE)
+
+merged <- merge(authors, books, by.x="surname",by.y="name")
+merged
+
+```
+
+
+2.c. Take the following string and replace every instance of “to” or “To” with “2”:
+
+To be, or not to be – that is the question:
+Whether ’tis nobler in the mind to suffer
+The slings and arrows of outrageous fortune,
+Or to take arms against a sea of troubles,
+And by opposing end them. To die – to sleep –
+No more...
+```{r, echo=T, message=F, warning=F}
+tobe <- "To be, or not to be – that is the question:
+Whether ’tis nobler in the mind to suffer
+The slings and arrows of outrageous fortune,
+Or to take arms against a sea of troubles,
+And by opposing end them. To die – to sleep –
+No more..."
+
+tobe2 <- gsub("[tT]o", "2", tobe)
+tobe2
+
+```
+
+
+3.a. Create a histogram using the base R graphics using some dataset or variable other than the one in the lessons. Always make sure your graph has well-labeled x and y axes and an explanatory title.
+```{r, echo=T, message=F, warning=F}
+normal.dist <- rnorm(100, mean=0)
+hist(normal.dist, xlab = "values", ylab = "Frequency", main="Histogram of a Random Normal Distribution")
+```
+
+
+3.b. Create a scatter plot using the base R graphics, again with some variable other than the one in the lessons.
+```{r, echo=T, message=F, warning=F}
+data.sc <- mtcars
+plot(data.sc$mpg, data.sc$hp, main="Scatterplot", xlab="MPG", ylab="HorsePower")
+```
+
+
+3.c. Create a histogram using ggplot, using some new data. In this and the later plots, please tinker with the settings using the examples in http://www.cookbook-r.com/Graphs/ to make it prettier.
+```{r, echo=T, message=F, warning=F}
+library(ggplot2)
+ggplot(data=data.sc, aes(mpg)) + 
+  geom_histogram(color="red", fill="salmon")
+```
+
+
+3.d. Create a box plot (with multiple categories) using ggplot, using some new data.
+```{r, echo=T, message=F, warning=F}
+data.iris <- iris
+ggplot(data.iris, aes(x=Species, y=Sepal.Length)) + 
+    geom_boxplot()
+```
+
+
+3.e. Create a scatter plot using ggplot, using some new data
+```{r, echo=T, message=F, warning=F}
+data.iris <- iris
+ggplot(data.iris, aes(x=Sepal.Length, y=Sepal.Width)) + geom_point(size=2, shape=23)
+```
+
+

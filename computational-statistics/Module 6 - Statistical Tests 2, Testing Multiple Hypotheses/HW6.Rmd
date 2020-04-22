@@ -1,0 +1,195 @@
+---
+title: "HW6"
+author: "Milad Tatari"
+date: "2/17/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Problem1
+1. You conduct an exit poll after an election, with the shown above:
+1.a. Based on the exit poll results, is age independent of Party ID or not? Conduct a chi-squared test by hand, showing each step in readably-formatted latex.
+
+# Answer
+
+We have 2 groups of observed data: age and partyID for some samples. We want to see whether these two factors are dependent or independent. Chi-Squared analysis can be employed to do this. First, let's define the hypothesisas:
+
+Null Hypothesis $H_0:$ the age and political party are INDEPENDENT
+alternative hypothesis $H_1:$ the age and political view are NOT totally independent.
+```{r}
+sexparty <- data.frame("18TO29"=c(86,52,61),"30TO44"=c(72,51,74),"45TO59"=c(73,55,70),
+                       "OVER60"=c(71,54,73),row.names=c("Democrat","Independent",
+                                                        "Republicn"))
+sexparty
+```
+Assuming Null Hypothesis, let's find expected probability of each element provided that they are independent. Total number of participants is:
+$$n=(86+52+61)+(72+51+74)+(73+55+70)+(71+54+73)=792$$
+So the total participants are 792. 
+Expected values are:
+
+$P_{democrat}=\frac{total.dem}{total.participants}=\frac{86+72+73+71}{792}=\frac{302}{792}=0.381$
+
+$P_{independent}=\frac{212}{792}=0.267$
+
+$P_{Republican}=\frac{278}{792}=0.351$
+
+$P_{18to29}=\frac{199}{792}=0.251$
+
+$P_{30to44}=\frac{197}{792}=0.248$
+
+$P_{45to59}=\frac{198}{792}=0.250$
+
+$P_{Over60}=\frac{198}{792}=0.250$
+
+so we can calculate the probablity of every cell like:
+
+$P_{dem\&18to29}=P_{dem}*P_{18to29}=0.381*0.251=0.0956$ so, number of people in the first cell (democrat and between 18 to 29) is $0.0956*792=75.7$
+
+$P_{dem\&30to44}=74.83$
+
+$P_{dem\&45to59}=75.43$
+
+$P_{dem\&over60}=75.43$
+
+$P_{ind\&18to29}=53.07$
+
+$P_{ind\&30to44}=52.44$
+
+$P_{ind\&45-59}=53$
+
+$P_{ind\&over60}=53$
+
+$P_{Rep\&18to29}=69.85$
+
+$P_{Rep\&30to44}=68.94$
+
+$P_{Rep\&45to59}=69.5$
+
+$P_{Rep\&over60}=69.5$
+
+Now, we have all the expected values and we can calculate 
+$${\chi}^2= \Sigma\frac{(f_o-f_e)^2}{f_e}$$
+Plugging in all the values, we have:
+
+${\chi}^2=\frac{(86-75.7)^2}{75.7}+\frac{(72-74.83)^2}{74.83}+\frac{(73-75.43)^2}{75.43}+\frac{(71-75.43)^2}{75.43}+\frac{(52-53.07)^2}{53.07}+\frac{(51-52.44)^2}{52.44}+\frac{(55-53)^2}{53}+\frac{(54-53)^2}{53}+\frac{(61-69.85)^2}{69.85}+\frac{(74-68.94)^2}{68.94}+\frac{(70-69.5)^2}{69.5}+\frac{(73-69.5)^2}{69.5}$
+
+$=1.367+0.1279+0.078+.26+0.0298+0.0567+0.075+0.0188+0.341+0.0035+0.176=3.691$
+
+Degree of freedom is $df=(r-1)*(c-1)=(3-1)*(4-1)=6$
+
+we use $\alpha=0.05$, so our 95% threshold value is :
+
+```{r}
+qchisq(.95,df=6)
+```
+
+
+Our test statistics is smaller than the threshold value $3.691<12.59$, so we CANNOT reject the NULL that these variables are independent. Let's calculate our P-Value:
+
+```{r}
+1-pchisq(3.691,df=6)
+```
+P value is bigger than 0.05 and it also confirms that we cannot reject the null.
+
+1.b. Verify your results using R to conduct the test.
+
+```{r}
+ageparty<-data.frame(age1=c(86,52,61),age2=c(72,51,74),age3=c(73,55,70),
+                     age4=c(71,54,73),row.names=c("democrats","independents",
+                                                  "republicans"))
+chisq.test(ageparty)
+```
+We get the same results aslo using R packages both for P-Value and $\chi^2$
+
+## Problem 2
+
+2.a. Now test for independence using ANOVA (an F test). Your three groups are Democrats,
+Independents, and Republicans. The average age for a Democrat is 43.3, for an Independent it’s 44.6, and for a Republican it’s 45.1. The standard deviations of each are D: 9.1, I: 9.2, R: 9.2. The overall mean age is 44.2. Do the F test by hand, again showing each step.
+
+# Solution
+
+The summary of F-Tests analysis is:
+
+Total samples of N in G different groups of the paramater x as:
+
+$(\overline{x}_1,s_1,n_1),(\overline{x}_2,s_2,n_2),...,(\overline{x}_g,s_g,n_g)$
+
+Let's define our NULL Hypothesis:
+
+$H_o: \mu_1=\mu_2=...=\mu_g=\overline{x} (averge\hspace{2mm} of\hspace{2mm} all\hspace{2mm}samples)$
+
+$H_a:$ at least one group has a different mean.
+
+In simple words, we want to test if there is any dependency betwwen paramaters among the groups. 
+
+$F_statistics=\frac{Average\hspace{2mm}variance\hspace{2mm}between\hspace{2mm}groups}{Average\hspace{2mm}variance\hspace{2mm}within\hspace{2mm}groups}$
+
+average variance between groups$=\frac{n_1(\overline{x}_1-\overline{x})^2+...+n_G(\overline{x}_G-\overline{x})^2}{G-1}$
+
+average variance within groups $=\frac{(n_1-1)*(s_1)^2+...+(n_G-1)*(s_G)^2}{N-G}$
+
+N is the total number of data and G is total number of groups.
+
+Degrees of freedom: 
+$$df1=G-1\\df2=N-G$$
+we have 3 groups as:
+
+Democrats: $\overline{x}_1=43.3,s_1=9.1,n_1=302$
+
+Independent: $\overline{x}_2=44.6,s_2=9.2,n_2=212$
+
+Republican: $\overline{x}_3=45.1,s_3=9.2,n_1=278$
+
+Overal mean : $\overline{x}=44.2,G=3,N=792$
+
+Average variance between groups $\frac{302(43.3-44.2)^2+212(44-44.2)^2+278(45.1-44.2)^2}{3-1}=239.14$
+
+Average variance within groups $=\frac{(302-1)*9.1^2+(212-1)*9.2^2+(278-1)*9.2^2}{792-3}=83.95$
+
+$$F-statistics=\frac{239.14}{83.95}=2.85\\df_1=3-1=2\\df_2=792-3=789$$
+we can now calculate the p value directly, which is the probality of getting sth that large or larger assuming the null is true.
+```{r}
+1-pf(2.85,2,789)
+```
+Clrealy it is bigger than 0.05, $0.058>0.05$ and so we CANNOT reject the null.
+
+We can aslo calculate the threshold as based on $\alpha=0.05$:
+
+```{r}
+qf(0.95,2,789)
+```
+the  value we got is smaller than this $F-ststistics(2.85)<3.007$, and we see again that we cannot reject the NULL. 
+
+if our error was for example  (alpha)0.07 we could reject the null.
+
+2.b. Check your results in R using simulated data. Generate a simulated dataset by creating three vectors: Democrats, Republicans, and Independents. Each vector should be a list of ages, each with a length equal to the number of Democrats, Independents, and Republicans in the table above, and the appropriate mean and sd based on 2.a (use rnorm to generate the vectors). Combine all three into a single dataframe with two variables: age, and a factor that specifies D, I, or R. Then conduct an F test using R’s aov function on that data and compare the results to 2a. Do your results match 2a? If not, why not?
+
+# Solution
+
+```{r}
+# as an example I have selected the set.seed(1) to get a constant result, otherwise
+# I will get different results every time. I will discuss it below
+set.seed(1)
+Democrates<-rnorm(302,43.3,9.1)
+Independents<-rnorm(212,44.6,9.2)
+Republicans<-rnorm(278,45.1,9.2)
+DD<-cbind("D",Democrates)
+II<-cbind("I",Independents)
+RR<-cbind("R",Republicans)
+age_party<-rbind(DD,II,RR)
+age_party<-cbind(as.factor(age_party[,1]),as.numeric(age_party[,2]))
+
+DF<-data.frame(age_party)
+#DF$Party<-as.factor(DF$Party)
+colnames(DF)<-c("Party","Age")
+tail(DF)
+#1 means democrat, 2 means independent,3 is republican
+
+aov.ex<-aov(DF[,2]~DF[,1],data=DF)
+summary(aov.ex)
+
+```
+every time I run the code as it is a random generation of numbers, I get different results. But it shows that I can determine dependency of age with party through statistical techniques we have learnt. For this example as set.seed is 1, I get F value of 1.50 which is smaller than 3.007 (obtained in part a) and we cannot reject the null. P value is also .221 (>0.05) showing that we cannot reject the null. I should highlight it again that if we remove the set.seed(1) we get different results every time we run the code, sometimes we can reject the null sometimes we cannot. 
+

@@ -1,0 +1,247 @@
+---
+title: "INSH5301 Intro Computational Statistics"
+author: "Ali Banijamali"
+date: "03/16/2020"
+output: pdf_document
+---
+
+
+## PROBLEM 1: Seat belts  
+## For this problem we are trying to test the effectiveness of mandatory seat belts usage laws in reducing traffic mortality. The independent variable (Y) is fatalityrate. Run all your regressions using the lm parameter. You need to download the seatbelts dataset to complete this part.
+  
+```{r, echo=T, message=F, warning=F}
+# Reading the data:
+seat.belt <- read.csv(
+  paste('C:/Users/alibs/Google Drive/Courses/INSH5301 Intro Computational Statistics/',
+  'Module 8 - Multiple Regression 1/seatbelts/seatbelts.csv', sep=''),
+  stringsAsFactors = F)
+# paste is for the path to be inside borders when printed as pdf.
+```
+  
+## 1.1. Run and interpret the bivariate regression of fatalityrate on primary (this is a binary variable that indicates the primary enforcement of seat belt laws).  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F}
+f_rate.vs.primary <- lm(fatalityrate ~ primary, data=seat.belt)
+summary(f_rate.vs.primary)
+```
+  
+The result show that the primary has a negative effect on the fatality rate (-0.0017203). The p-value is not great (0.0117) neither is the effect of primary on the fatality rate (-0.0017203). $R^2$ is very small too (0.008309). Only %0.8 of the variation in fatality rate is explained by primary.  
+  
+  
+  
+## 1.2. Create a correlation matrix for the entire dataset using the cor command - exclude non-numeric variables -. Do you think that the exogeneity assumption may not be satisfied for the previous regression? (Explain)  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F}
+# There are NA cells in the 'sb_useage' column. I am replacing them with the average
+# value in that column.
+seat.belt[is.na(seat.belt$sb_useage), 'sb_useage'] <- mean(seat.belt$sb_useage, na.rm=T)
+
+# The rest of the non-binary columns like age, income, ... don't have NAs and Nothing 
+# can be done about the binary items (setting as average value is not meaningful there)
+# Just to make sure, we remove NAs using na.omit, which doesn't change the number of rows
+# meaning that no more NA is remained in the table
+seat.belt_na.dropped <- na.omit(seat.belt)
+
+cor(seat.belt[, -1]) # I removed the state column because it was non-numeric
+```
+  
+When we are talking about exogeneity of a variable, we mean that this variable is independent of other variables in the system. In other words, it is not affected by other variables. By looking at the correlation matrix above, we can see that primary doesn't have a strong correlation with other variables, except for sb_usage with a correlation of 0.387382377 and secondary with a correlation of -0.368623307. So, although the correlation is weak, there is still some correlation between primary and these two variables. Therefore, exogeneity will not be satisfied for primary.
+  
+## 1.3. Using the dataset provided, run a set of 3 additional multiple regressions by sequentially adding other variables that you think are relevant in the model. For each regression (1) Argue why you add the particular additional variable, (2) interpret the parameters, (3) the R2 and adjusted R2, and, (4) the F-statistic.  
+  
+ANS.  
+  
+We'll start by the one variable checked in part 1 and then add more variables:
+```{r, echo=T, message=F, warning=F}
+f_rate.vs.primary <- lm(fatalityrate ~ primary, data=seat.belt)
+summary(f_rate.vs.primary)
+```
+  
+Adding 1st variable: (speed70)
+```{r, echo=T, message=F, warning=F}
+f_rate.vs.primary <- lm(fatalityrate ~ primary + speed70, data=seat.belt)
+summary(f_rate.vs.primary)
+```  
+  
+The new variable doesn't seem to have more value than the previous value. Let's add the second variable: (income)  
+```{r, echo=T, message=F, warning=F}
+f_rate.vs.primary <- lm(fatalityrate ~ primary + speed70 + income, data=seat.belt)
+summary(f_rate.vs.primary)
+```
+  
+Finally, the third variable to be added is age:
+```{r, echo=T, message=F, warning=F}
+f_rate.vs.primary <- lm(fatalityrate ~ primary + speed70 + income + age, data=seat.belt)
+summary(f_rate.vs.primary)
+```
+  
+To sum up: primary and speed have a positive effect, meaning that when there was a primary enforcement and the speed was above 70, the fatality rate has increased. The other two variables have the oppoite relationship (negative) which means that As people have more income and their age increase, the fatality rate decreases. These all make sense: If you have higher speed, the chance of a deadly crash increases, or young people tend to drive more carelessly. With higher income, people afford to buy more expensive cars which are equiped with more safety features and are generally considered safer.  
+Although all of these variables have their own effect on the fatality rate, we should note that the effect of Age and Income is much more prominent! Notice that when we added them, the $R^2$ immediately increased. and the other interesting point is that when we added Income after Age, $R^2$ didn't change that much. This shows that they are related somehow. It makes sense, as you grow older, your income generally increases. Also, if you look at the p-values, income has the lowest p-value. So we can safely say between these variables, the most important variable is income. We can even say that, if you have more money, you probably have a better car and you are more inclined to drive at higher speeds because more expensive cars are more stable in higher speeds and people can easily drive at higher speeds without feeling that they are going too fast.  
+  
+ 
+  
+## PROBLEM 2. College on educational attainment  
+## For this problem we are going to explore the effect of distance from college on educational attainment. The independent variable (Y) is years of completed education ed. All the estimated regression parameters for this part should be computed using linear algebra - see lesson 8.2 -. Also, any statistic (F-statistic or R2) should be computed manually and without the use of the lm command - you can use the command to verify your work -. You need to download the collegeDistance dataset to complete this part.  
+  
+```{r, echo=T, message=F, warning=F}
+# Reading the data:
+col.dist <- read.csv(
+  paste('C:/Users/alibs/Google Drive/Courses/INSH5301 Intro Computational Statistics/',
+  'Module 8 - Multiple Regression 1/collegedistance/CollegeDistance.csv', sep=''),
+  stringsAsFactors = F)
+# paste is for the path to be inside borders when printed as pdf.
+``` 
+  
+## 2.1. Run and interpret the bivariate regression of ed on dist (distance to college). What’s the estimated slope?  
+  
+ANS.  
+We will go by the following formula:  
+$Y=X\beta+\epsilon$  
+Multiplying both sides by $X^T$ (X transpose):  
+$X^TY=X^TX\beta+X^T\epsilon$  
+Knowing that $X^T\epsilon=0$, We then multiply both sides by $(X^TX)^{-1}$, we will have:  
+$(X^TX)^{-1}X^TY=(X^TX)^{-1}X^TX\beta$  
+Again knowing that $A^{-1}A=1$, we will have:  
+$\beta=(X^TX)^{-1}X^TY$  
+Now we can find $\beta$s using this formula:
+```{r, echo=T, message=F, warning=F}
+# Since this is a bivariate regression between distance and education:
+X.1 <- as.matrix(cbind(1, col.dist$dist))
+Y.1 <- as.matrix(col.dist$ed)
+
+beta.1 <- solve(t(X.1) %*% X.1) %*% (t(X.1) %*% Y.1)
+print(paste('Intercept = ', beta.1[1], sep=''))
+print(paste('Slope = ',     beta.1[2], sep=''))
+
+# For checking and comparison:
+ed.vs.dist <- lm(ed ~ dist, data=col.dist)
+summary(ed.vs.dist)
+```
+The negative slope means that as the distance to the college increase, the years of complete education decrease. However, the R-squared shows that this variable, explains only %0.7 of the variation in education level.   
+  
+  
+## 2.2. Now, run a multiple regression of ed on dist but also include: bytest, female, black, hispanic, incomehi, ownhome, dadcoll, momcoll, cue80, and, stwmfg80. What is the estimated effect of ed on dist? Compare your result to the previous estimation. Explain why the effects may differ.  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F}
+# Deleting these columns:'urban', 'tuition', 'ed':
+X.2 <- as.matrix(cbind(1, col.dist[, -c(8, 12, 13)]))
+Y.2 <- as.matrix(col.dist$ed)
+
+beta.2 <- solve(t(X.2) %*% X.2) %*% (t(X.2) %*% Y.2)
+beta.2
+
+# For checking and Comparison:
+ed.vs.vars <- lm(ed ~ female+black+hispanic+bytest+dadcoll+momcoll+
+                   ownhome+cue80+stwmfg80+dist+incomehi, data=col.dist)
+summary(ed.vs.vars)
+```
+As we can see, the model now has a larger R-squared, meaning that the model now explains %28 of the variations in the dependent variable (compared to %0.7 when we had only distance variable in the model.) Also the overal p-value has decreased with the addition of new variables.  
+  
+  
+## 2.3. Compute the R2 and the adjusted R2 for both regressions and interpret its significance. Which measure of goodness of fit you prefer in each regression?  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F}
+# 1. Computing R-square & adjusted R-squared for the regression model 1:
+# Calculating the predicted Y:
+Y.1_pred <- X.1 %*% beta.1
+Y.1      <- as.matrix(col.dist$ed)
+
+# Calculating R-squared:
+TSS <- sum( (Y.1 - mean(Y.1))^2 )
+SSE <- sum( (Y.1 - Y.1_pred)^2 )
+R2  <- (TSS-SSE)/TSS
+cat('R-squared for model 1 =', R2)
+
+
+# Calculating adjusted R-squared:
+n <- nrow(X.1)   # n is no. of observations
+k <- ncol(X.1)-1 # k is no. of variables
+
+dft <- n-1
+dfe <- n-k-1
+
+adj_R2 <- (TSS/dft - SSE/dfe) / (TSS/dft)
+cat('Adjusted R-squared for model 1 =', adj_R2)
+
+
+# 2. Computing R-square & adjusted R-squared for the regression model 2:
+# Calculating the predicted Y:
+Y.2_pred <- X.2 %*% beta.2
+Y.2      <- as.matrix(col.dist$ed)
+
+# Calculating R-squared:
+TSS <- sum( (Y.2 - mean(Y.2))^2 )
+SSE <- sum( (Y.2 - Y.2_pred)^2 )
+R2  <- (TSS-SSE)/TSS
+cat('R-squared for model 2 =', R2)
+
+
+# Calculating adjusted R-squared:
+n <- nrow(X.2)   # n is no. of observations
+k <- ncol(X.2)-1 # k is no. of variables
+
+dft <- n-1
+dfe <- n-k-1
+
+adj_R2 <- (TSS/dft - SSE/dfe) / (TSS/dft)
+cat('Adjusted R-squared for model 2 =', adj_R2)
+```
+  
+Generally, the adjusted R-squared is a better measure because it is less prone to overfitting when we have a lot of parameters explaining the dependent variable. However, in the first model, since it is being explained by only one parameter, the mentioned case doesn't really apply because with only one variable we shouldn't be worried about overfitting. In the second model however, we must definiitely pay more attention to the adjusted R-squared.
+  
+  
+  
+## 2.4. Bob is a non-hispanic black male. His high school was 20 miles from the nearest college. His base year composite score (bytest) was 58. His family income in 1980 was $26, 000, and his family owned a house. His mother attended college, but his father did not. The unemployment rate in his county was 7.5%, and the state average manufacturing hourly wage was $9.75. Predict Bob’s years of completed schooling using both regressions and compare the results. Which result you prefer? (Explain)  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F}
+# 1.First let's fill Bob's info in a matrix, they should be in the following order:
+colnames(X.2)
+Bob.info.1 <- c(1, 20)
+Bob.info.2 <- c(1, 0, 1, 0, 58, 0, 1, 1, 7.5, 9.75, 20, 1)
+
+# Years of completed school based on model 1:
+Bob.Y1 <- Bob.info.1 %*% beta.1
+cat("Bob's years of completed school based on model 1 =", Bob.Y1)
+
+# Years of completed school based on model 2:
+Bob.Y2 <- Bob.info.2 %*% beta.2
+cat("Bob's years of completed school based on model 2 =", Bob.Y2)
+```
+As we calculated in the previous part, both R-squared and the adjusted R-squared are greater for the second model, the second model incorporates more parameters and takes into account more variables (of all the information that we have about Bob, the first model only uses the college's distance). The second model explains more of the variation in years of education according to it's R-squared/adjusted R-squared.  
+  
+  
+  
+## 2.5. Test if all the parameters of the model are simultaneously equal to zero.  
+  
+ANS.  
+We have to use F-statistics. F-statistics is defined by:  
+$F-statistics = \frac{R^2/k}{(1-R^2)/(n-k-1)}$
+```{r, echo=T, message=F, warning=F}
+# Calculating the F-statistic for model 2:
+n <- nrow(X.2)
+k <- ncol(X.2)-1
+
+Y.2_pred <- X.2 %*% beta.2
+Y.2      <- as.matrix(col.dist$ed)
+
+TSS <- sum( (Y.2 - mean(Y.2))^2 )
+SSE <- sum( (Y.2 - Y.2_pred)^2 )
+R2  <- (TSS-SSE)/TSS
+
+# Calculating F-statistic:
+F.stat <- (R2/k) / ((1-R2)/(n-k-1))
+F.stat
+
+# Calculating p-value:
+pf(F.stat, k, (n-k-1), lower.tail=F)
+``` 
+F-test is another way to test the significance of the model. It basically tests if the parameters of the model ($\beta$s) are significantly different from zero:  
+$H_0 = None\ of\ \beta s\ are\ significantly\ different\ from\ zero\ (The\ model\ is\ entirely\ insignificant.)$  
+The very small p-value (1.916483e-263) shows that all of the parameters put together can't be by chance and we can reject the null hypothesis.    
+  
+  
