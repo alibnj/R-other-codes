@@ -1,0 +1,280 @@
+---
+title: "INSH5301 Intro Computational Statistics"
+author: "Ali Banijamali"
+date: "04/06/2020"
+output: pdf_document
+header-includes:
+   - \usepackage{dcolumn}    
+   - \usepackage{float}
+---
+
+
+## For this homework you’ll need to use some real world data to answer some research questions using multiple regression. The data, along with the data description, can be downloaded from the course material section in Blackboard. You can also downlod this dataset using the AER package.
+## AER package: Just Run library(AER) first, and then data(“CollegeDistance”)
+
+## For this homework use the bfi dataset (25 personality items thought to boil down to a few core personality types) from the psych package. You can load the data using, for instance, data(bfi) after loading the psych package; you may need to clean it a bit first with na.omit() to remove the observations with na items, or else impute those missing items. It might also help to use scale() on your dataset before analysis. scale() takes all your variables (columns) and rescales them to have a mean of 0 and a sd of 1, so that you can more easily compare all your factors or clusters to see which are larger or smaller.  
+## For the factor analysis, you may use any of the methods covered in the lesson – they should all produce similar results, though princomp and prcomp might be simplest. You don’t have to interpret everything, say, fa() outputs, which produce a lot of output – is easier to use str() to examine the output of your function and find the quantities you want.  
+## Also, because some of the methods when deciding the number of factors and number of clusters are not objective, don’t worry about not getting the right number. But provide an explanation to why you choose a the particular number, your reasoning should be based on the described methodologies in the learning module.  
+  
+```{r, echo=T, message=F, warning=F}
+# Required Packages:
+# install.packages("psych")
+library(psych)
+
+# Reading the data:
+bfi <- data.frame(bfi)
+
+# Removing NAs:
+bfi <- na.omit(bfi)
+
+# Scaling to mean=0, sd=1:
+# (We could also write a simple function to do this, we used rescale from psych package)
+bfi_scaled <- data.frame(apply(bfi, 2, FUN=function(x){rescale(x, mean=0, sd=1)}))
+colnames(bfi_scaled) <- colnames(bfi) # Adding col.names
+
+# I am throwing away gender, education and age because I think we want
+# to cluster the behaviors not age, gender and education
+bfi_scaled <- bfi_scaled[1:25]
+```
+  
+## After running a factor analysis or PCA, be sure to discuss and interpret the results:  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F}
+# PCA using singular value decomposition (SVD):
+pca.SVD <- prcomp(bfi_scaled)
+# 1st component:
+pca.SVD$rotation[ ,1][order(pca.SVD$rotation[ ,1])] # order() for sorting
+# 2nd component:
+pca.SVD$rotation[ ,2][order(pca.SVD$rotation[ ,2])]
+# 3rd component:
+pca.SVD$rotation[ ,3][order(pca.SVD$rotation[ ,3])]
+
+# PCA using covariance/eigenvector:
+pca.COV <- princomp(bfi_scaled)
+# 1st component:
+pca.COV$loadings[ ,1][order(pca.COV$loadings[ ,1])]
+# 2nd component:
+pca.COV$loadings[ ,2][order(pca.COV$loadings[ ,2])]
+# 3rd component:
+pca.COV$loadings[ ,3][order(pca.COV$loadings[ ,3])]
+
+# In order to interpret these, let's look at the keys in bfi table:
+bfi.keys
+```
+We can see that the 2 approaches produce the same result (only the order is different which is not really meaningful). In he first principal components, the extreme sides are E2 (Extraversion2) and N4 (Neuroticism4) from one side to A5 (Agree5) and E4 (Extraversion 4) from the other side [E2, N4, ..., A5, E4]. On the second principal component we have E1 (Extraversion1) and O5 (Openness5) from one side to N1 (Neuroticism1) and N3 (Neuroticism3) on the other side [E1, O5, ..., N1, N3].  
+bfi dataset represents 25 personality items in 5 general categories:  
+- Agree (A)  
+- Conscientious (C)  
+- Extraversion (E)  
+- Neuroticism (N)  
+- Openness (O)  
+which are thought to represent personality.  
+So according to the details of these codes, the first PC refers to the social skills of people w/ one side having people with no interest in approaching others and socializing and the other side people who make friends easily and who make others around them feel at ease.  
+The second important component is about emotional state of people with one side people who are indifferent about other people's feelings and are not talkative and the other side people who are more emotional and get angry easily and have frequent mood swings.
+  
+  
+## 1. Examine the factor eigenvalues in the dataset. Plot these in a scree plot and use the “elbow” test to guess how many factors one should retain.  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F}
+# To get the elbow test, I am manually calculating the eigen values:
+
+# PCA using manual method:
+# 1. Find the covariance matrix:
+cov.matrix <- cov(bfi_scaled)
+# 2. Calculating the eigen values:
+eigen.values <- eigen(cov.matrix)
+# 3. The PC's:
+# eigen1 <- eigenm$vectors[,1]
+
+# 4. The scree plot:
+plot(eigen.values$values, type="b")
+```
+I would say that from 7th principal component, the curve gets flat, so at that point on we dn't want the PCs. If we wanted to go by the other method to keep only eigen values above 1, we would have done the same. So, we'll say the points from 7th principal component are probably just noise.  
+  
+## 2. How many factors are needed to explain 50 percent of the total variance in the dataset?  
+  
+ANS.  
+To answer this question, we have to use the cumulative variance
+```{r, echo=T, message=F, warning=F, results='asis'}
+plot(cumsum(eigen.values$values)/sum(eigen.values$values), ylim=c(0,1))
+```
+I would say, somewhere between 4th and 4th component, explains 50 percent of the total variance of the data.  
+  
+  
+## 3. Examine the loadings of the factors on the variables (sometimes called the “rotation” in the function output) – ie, the projection of the factors on the variables – focusing on just the first one or two factors. Sort the variables by their loadings, and try to interpret what the first one or two factors “mean.” This may require looking more carefully into the dataset to understand exactly what each of the variables were measuring. You can find more about the data in the psych package using ?psych.  
+  
+ANS.  
+I have completely answered this part before Question 1. (I could copy and paste it here again but it was redundant)  
+ 
+    
+## Next perform a cluster analysis with the same dataset.
+  
+## 4. First use k-means and examine the centers using two and three centers. How are they similar to and different from the factor loadings of the first couple factors?  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F}
+set.seed(1)
+# Running kmeans w/ 2 centers and 25 random start:
+kmeans2.bfi <- kmeans(bfi_scaled, centers=2, nstart=25)
+
+kmeans2.centroids <- kmeans2.bfi$centers
+
+kmeans2.topvars_centroid1 <- kmeans2.centroids[1, order(kmeans2.centroids[1, ])]
+kmeans2.topvars_centroid1
+
+kmeans2.topvars_centroid2 <- kmeans2.centroids[2, order(kmeans2.centroids[2, ])]
+kmeans2.topvars_centroid2
+
+# Running kmeans w/ 3 centers and 25 random start:
+kmeans3.bfi <- kmeans(bfi_scaled, centers=3, nstart=25)
+
+kmeans3.centroids <- kmeans3.bfi$centers
+
+kmeans3.topvars_centroid1 <- kmeans3.centroids[1, order(kmeans3.centroids[1, ])]
+kmeans3.topvars_centroid1
+
+kmeans3.topvars_centroid2 <- kmeans3.centroids[2, order(kmeans3.centroids[2, ])]
+kmeans3.topvars_centroid2
+
+kmeans3.topvars_centroid3 <- kmeans3.centroids[3, order(kmeans3.centroids[3, ])]
+kmeans3.topvars_centroid3
+```
+For 2 clusters, the clusters are the same w/ different order and the same as one of the factors in the previous part.  
+The first 2 PCs were: [E2, N4, ..., A5, E4] and [E1, O5, ..., N1, N3]  
+Here for 2 clusters model, we have: [E2, N4, ..., A5, E4] and [E4, A5, ..., N4, E2]  
+and for the 3 cluster model: [E4, E3, ..., E1, E2], [N4, N3, ..., A5, E4] and [E1, E2, ..., N1, N3]  
+Generally, there is a strong overlap between clusters and factors, but a key difference is that factors are inherently dimensional and oppositional: there are two directions for every factor, and we often see clear oppositions at either end.  
+Clusters are less oppositional: we can talk about variables that score highly , but it is less illuminating to look at the variables that score weakly, since those are just things that aren’t near the cluster, which is more of a grab-bag when the cluster is some specific set of variables.  
+That's why instead of looking at the whole ranges, we should look at the tails of the above distributions which have higher scores:  
+For 2 cluster model: [E4, A5, E3, ...] and [E2, N4, C5, ...]  
+and for the 3 cluster model: [E2, E1, C5, ...], [E4, A5, E3, ...] and [N3, N1, N2, ...]  
+As we can see, 2 clusters are similar in 2 and 3 models.  
+Here, the 3 cluster model is:  
+Cluster 1: Find it difficult to approach others, Don't talk a lot, Waste my time, ...  
+Cluster 2: Make friends easily, Make people feel at ease, Know how to captivate people, ...  
+Cluster 3: Have frequent mood swings, Get angry easily, Get irritated easily, ...  
+Cluster 1 anti-social people, Cluster 2 supportive, social people and Cluster 3 sensitive and attention-payer! people.  
+and the 2 cluster is:  
+Cluster 1: Make friends easily, Make people feel at ease, Know how to captivate people, ...  
+Cluster 2: Find it difficult to approach others, Often feel blue, Waste my time, ...  
+Clearly, 2 clusters are social vs antisocial people.  
+ 
+
+## 5. Next use hierarchical clustering. Print the dendrogram, and use that to guide your choice of the number of clusters. Use cutree to generate a list of which clusters each observation belongs to. Aggregate the data by cluster and then examine those centers (the aggregate means) as you did in (4). Can you interpret all of them meaningfully using the methods from (4) to look at the centers?  
+  
+ANS.  
+```{r, echo=T, message=F, warning=F}
+# 1. Hierarchical clustering:
+bfi.hier <- hclust(dist(bfi_scaled), method="complete")
+# I changed the method to complete, because the results for average were
+# too dense and unrocognizable
+
+# 2. Cluster dendrogram pot:
+plot(bfi.hier, labels=F)
+abline(a=14, b=0, col="red")
+
+# 3. Using cutree to generate the list of clusters of the observations:
+hier.clusters <- as.vector(cutree(bfi.hier, h=14))
+hier.info <- cbind(bfi[26:28], hier_clusters=hier.clusters)
+head(hier.info)
+
+
+# 4. Aggregating to find the centroids:
+hier.clust <- cbind(bfi_scaled, hier_clusters=hier.clusters)
+hier.centroids <- aggregate(hier.clust[1:25], by=list(hier.clust$hier_clusters), FUN=mean) 
+hier.centroids
+
+# 5. Looking at the centers:
+tail(t(hier.centroids[1, order(hier.centroids[1, ])]))
+tail(t(hier.centroids[2, order(hier.centroids[2, ])]))
+tail(t(hier.centroids[3, order(hier.centroids[3, ])]))
+```
+Looking at clusters, for cluster 1 we have: [A3, E5, A5, ...] -> Know how to comfort others, Take charge, Make people feel at ease, ...  
+cluster 2: [C4, O5, E2, ...] -> Do things in a half-way manner, Will not probe deeply into a subject, Find it difficult to approach others, ...  
+Cluster 3: [E1, E2, A1, ...] -> Don't talk a lot, Find it difficult to approach others, Indifferent to the feelings of others, ...  
+Cluster 1 supportive social people, Cluster 2 in non-interested and insensitive people, Cluster 3 antisocial indifferent people.  
+Here 2 group is similar to kmeans cluster (the supportive and socail group and antisocail group), and 1 is the exact opposite: the insensitive and non-interested people.  
+  
+  
+## 6.  From the factor and cluster analysis, what can you say more generally about what you have learned about your data?  
+  
+ANS.  
+To answer this part let's add the information that we threw away at the beggining. Let's see how these clusters are related to education, age and gender. As we saw in the hierarchical model, 3 clusters seem reasonable. So, I am going to comment based on the results of kmeans for 3 custer:  
+```{r, echo=T, message=F, warning=F}
+# Analysis using dplyr package:
+library(tidyverse)
+# Cluster Info:
+info <- cbind(bfi[26:28], clusters=kmeans3.bfi$cluster)
+
+# Grouping by Clusters:
+info.gr <- group_by(info, clusters)
+
+# Percentage in each cluster:
+summarize(info.gr,
+          perc_in_cluster=n()*100/nrow(info))
+
+# Percentage of men in cluster 1:
+nrow(info[(info$gender==1 & info$clusters==1), ])*100/nrow(info[info$clusters==1, ])
+# Percentage of men in cluster 2:
+nrow(info[(info$gender==1 & info$clusters==2), ])*100/nrow(info[info$clusters==2, ])
+# Percentage of men in cluster 3:
+nrow(info[(info$gender==1 & info$clusters==3), ])*100/nrow(info[info$clusters==3, ])
+
+# Average age in each cluster:
+summarize(info.gr,
+          ave_age=mean(age))
+
+# Percentage of education lvl for Cluster (1):
+# Highschool:
+nrow(info[(info$education==1 & info$clusters==1), ])*100/nrow(info[info$clusters==1, ])
+
+# Finished HS:
+nrow(info[(info$education==2 & info$clusters==1), ])*100/nrow(info[info$clusters==1, ])
+
+# Some College:
+nrow(info[(info$education==3 & info$clusters==1), ])*100/nrow(info[info$clusters==1, ])
+
+# College Grad:
+nrow(info[(info$education==4 & info$clusters==1), ])*100/nrow(info[info$clusters==1, ])
+
+# Grad Degree:
+nrow(info[(info$education==5 & info$clusters==1), ])*100/nrow(info[info$clusters==1, ])
+
+
+# Percentage of education lvl for Cluster (2):
+# Highschool:
+nrow(info[(info$education==1 & info$clusters==2), ])*100/nrow(info[info$clusters==2, ])
+
+# Finished HS:
+nrow(info[(info$education==2 & info$clusters==2), ])*100/nrow(info[info$clusters==2, ])
+
+# Some College:
+nrow(info[(info$education==3 & info$clusters==2), ])*100/nrow(info[info$clusters==2, ])
+
+# College Grad:
+nrow(info[(info$education==4 & info$clusters==2), ])*100/nrow(info[info$clusters==2, ])
+
+# Grad Degree:
+nrow(info[(info$education==5 & info$clusters==2), ])*100/nrow(info[info$clusters==2, ])
+
+# Percentage of education lvl for Cluster (3):
+# Highschool:
+nrow(info[(info$education==1 & info$clusters==3), ])*100/nrow(info[info$clusters==3, ])
+
+# Finished HS:
+nrow(info[(info$education==2 & info$clusters==3), ])*100/nrow(info[info$clusters==3, ])
+
+# Some College:
+nrow(info[(info$education==3 & info$clusters==3), ])*100/nrow(info[info$clusters==3, ])
+
+# College Grad:
+nrow(info[(info$education==4 & info$clusters==3), ])*100/nrow(info[info$clusters==3, ])
+
+# Grad Degree:
+nrow(info[(info$education==5 & info$clusters==3), ])*100/nrow(info[info$clusters==3, ])
+```
+Comparison of education and age wasn't very useful. However, the analysis shows that clusters 2 and 3 are majority women (w/ %69 and %75 women respectively). However again, we have to take into account that %68 of the total participants in the survey were women, so it might be more interesting that cluster 1 had a greater percentage of men.  
+The details of each category was already discussed so I didn't talk about them again here. But the whole point of difference between factors and clusters is that factors are a range (here ranges of mood from social to isolated OR from indifferent to sensitive), but clusters are one head of this range. In the case of this study we can say the personality of people is first explained by their social abilities and then by how emotional and sensitive they are.  
+  
